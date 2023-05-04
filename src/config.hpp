@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <memory>
+#include <optional>
 #include <string>
 
 #include <nlohmann/json.hpp>

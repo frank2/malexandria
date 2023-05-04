@@ -1,0 +1,25 @@
+[submodule "lib/cryptopp"]
+	path = lib/cryptopp
+	url = https://github.com/weidai11/cryptopp.git
+[submodule "lib/cryptopp-cmake"]
+	path = lib/cryptopp-cmake
+	url = https://github.com/abdes/cryptopp-cmake
+[submodule "lib/json"]
+	path = lib/json
+	url = https://github.com/nlohmann/json
+[submodule "lib/zlib"]
+	path = lib/zlib
+	url = https://github.com/madler/zlib.git
+[submodule "lib/libssh"]
+	path = lib/libssh
+	url = https://git.libssh.org/projects/libssh.git
+[submodule "lib/libzip"]
+	path = lib/libzip
+	url = https://github.com/frank2/libzip.git
+[submodule "lib/argparse"]
+	path = lib/argparse
+	url = https://github.com/frank2/argparse.git
+	branch = patches
+[submodule "lib/sqlite3-cmake"]
+	path = lib/sqlite3-cmake
+	url = https://github.com/frank2/sqlite3-cmake.git

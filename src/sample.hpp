@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstddef>
-#include <format>
 #include <fstream>
 #include <map>
 #include <memory>

@@ -3,11 +3,12 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <format>
 #include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
+
+#include <fmt/core.h>
 
 #include "config.hpp"
 
@@ -83,18 +84,18 @@ namespace malexandria
       template <typename... Args>
       static void Raw(Level level, const std::string &message, Args&&... args)
       {
-         Logger::GetInstance().write(level, std::vformat(message, std::make_format_args(args...)));
+         Logger::GetInstance().write(level, fmt::vformat(message, fmt::make_format_args(args...)));
       }
 
       template <typename... Args>
       static void Prefixed(Level level, const std::string &prefix, const std::string &message, Args&&... args)
       {
-         Logger::Raw(level, std::format("{} {}", prefix, message), args...);
+         Logger::Raw(level, fmt::format("{} {}", prefix, message), args...);
       }
 
       template <typename... Args>
       static void DebugN(const std::string &message, Args&&... args) {
-         Logger::Prefixed(Level::Debug, "$$", std::format("{}\n", message), args...);
+         Logger::Prefixed(Level::Debug, "$$", fmt::format("{}\n", message), args...);
       }
 
       template <typename... Args>
@@ -104,7 +105,7 @@ namespace malexandria
 
       template <typename... Args>
       static void InfoN(const std::string &message, Args&&... args) {
-         Logger::Prefixed(Level::Info, ">>", std::format("{}\n", message), args...);
+         Logger::Prefixed(Level::Info, ">>", fmt::format("{}\n", message), args...);
       }
 
       template <typename... Args>
@@ -114,7 +115,7 @@ namespace malexandria
 
       template <typename... Args>
       static void NoticeN(const std::string &message, Args&&... args) {
-         Logger::Prefixed(Level::Notice, "!!", std::format("{}\n", message), args...);
+         Logger::Prefixed(Level::Notice, "!!", fmt::format("{}\n", message), args...);
       }
 
       template <typename... Args>
@@ -124,7 +125,7 @@ namespace malexandria
 
       template <typename... Args>
       static void FatalN(const std::string &message, Args&&... args) {
-         Logger::Prefixed(Level::Fatal, "##", std::format("{}\n", message), args...);
+         Logger::Prefixed(Level::Fatal, "##", fmt::format("{}\n", message), args...);
       }
 
       template <typename... Args>

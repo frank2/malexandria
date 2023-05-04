@@ -24,7 +24,9 @@ std::string malexandria::password_prompt(std::string prompt, bool echo) {
          break;
 
       case '\b':
-         result.pop_back();
+         if (result.size() > 0)
+            result.pop_back();
+         
          break;
 
       default:

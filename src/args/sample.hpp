@@ -816,28 +816,28 @@ namespace malexandria
                   }
                   else
                   {
-                     std::cout << std::format("[Sample ID: {}]", to_hex_string(sample.sha256())) << std::endl;
+                     std::cout << fmt::format("[Sample ID: {}]", to_hex_string(sample.sha256())) << std::endl;
 
                      if (sample.has_alias())
-                        std::cout << std::format("   alias:             {}", sample.alias()) << std::endl;
+                        std::cout << fmt::format("   alias:             {}", sample.alias()) << std::endl;
 
-                     std::cout << std::format("   original filename: {}", sample.filename()) << std::endl;
-                     std::cout << std::format("   md5:               {}", to_hex_string(sample.md5())) << std::endl;
-                     std::cout << std::format("   sha1:              {}", to_hex_string(sample.sha1())) << std::endl;
-                     std::cout << std::format("   sha256:            {}", to_hex_string(sample.sha256())) << std::endl;
-                     std::cout << std::format("   sha3-384:          {}", to_hex_string(sample.sha3_384())) << std::endl;
+                     std::cout << fmt::format("   original filename: {}", sample.filename()) << std::endl;
+                     std::cout << fmt::format("   md5:               {}", to_hex_string(sample.md5())) << std::endl;
+                     std::cout << fmt::format("   sha1:              {}", to_hex_string(sample.sha1())) << std::endl;
+                     std::cout << fmt::format("   sha256:            {}", to_hex_string(sample.sha256())) << std::endl;
+                     std::cout << fmt::format("   sha3-384:          {}", to_hex_string(sample.sha3_384())) << std::endl;
 
                      for (auto &tag : sample.tags())
-                        std::cout << std::format("   tag:               {}", *tag) << std::endl;
+                        std::cout << fmt::format("   tag:               {}", *tag) << std::endl;
 
                      for (auto &family : sample.families())
-                        std::cout << std::format("   family:            {}", *family) << std::endl;
+                        std::cout << fmt::format("   family:            {}", *family) << std::endl;
 
                      for (auto &parent : parents)
-                        std::cout << std::format("   parent:            {}", parent.label()) << std::endl;
+                        std::cout << fmt::format("   parent:            {}", parent.label()) << std::endl;
 
                      for (auto &child : children)
-                        std::cout << std::format("   child:             {}", child.label()) << std::endl;
+                        std::cout << fmt::format("   child:             {}", child.label()) << std::endl;
 
                      std::cout << std::endl;
                   }
@@ -1259,7 +1259,7 @@ namespace malexandria
             std::vector<std::uint8_t> out_bytes, err_bytes;
             std::string out_string, err_string;
             
-            std::tie(exit_code, out_bytes, err_bytes) = session.exec("cat - > dongs && cat dongs && sha256sum dongs", "dingleberry\n");
+            std::tie(exit_code, out_bytes, err_bytes) = session.exec("cat - > dongs && cat dongs && sha256sum dongs && echo pricks 1>&2", "dingleberry\n");
             out_string = std::string(out_bytes.begin(), out_bytes.end());
             err_string = std::string(err_bytes.begin(), err_bytes.end());
             

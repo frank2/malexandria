@@ -173,7 +173,7 @@ std::optional<std::int64_t> Sample::IDFromHash(const std::vector<std::uint8_t> &
    else
       throw exception::UnrecognizedHashType(to_hex_string(hash));
 
-   std::string query = std::format("SELECT id FROM mlx_samples WHERE {}=?", hash_type);
+   std::string query = fmt::format("SELECT id FROM mlx_samples WHERE {}=?", hash_type);
    auto &database = Database::GetInstance();
    auto hex_hash = to_hex_string(hash);
    auto result = database.query(query, hex_hash);

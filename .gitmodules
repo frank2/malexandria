@@ -23,3 +23,6 @@
 [submodule "lib/sqlite3-cmake"]
 	path = lib/sqlite3-cmake
 	url = https://github.com/frank2/sqlite3-cmake.git
+[submodule "lib/libfmt"]
+	path = lib/libfmt
+	url = https://github.com/fmtlib/fmt.git

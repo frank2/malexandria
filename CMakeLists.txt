@@ -14,7 +14,7 @@ endif()
 project(malexandria CXX)
 
 set(_DISABLE_INSTALLATION True)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
@@ -74,6 +74,10 @@ set(WITH_EXAMPLES OFF CACHE BOOL "Do not compile the examples." FORCE)
 set(WITH_ZLIB OFF CACHE BOOL "Disable zlib support for ssh." FORCE)
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/libssh)
 
+set(FMT_INSTALL OFF CACHE BOOL "Do not create an install target for libfmt" FORCE)
+set(FMT_TEST OFF CACHE BOOL "Do not generate tests for libfmt" FORCE)
+add_subdirectory(${PROJECT_SOURCE_DIR}/lib/libfmt)
+
 set(MALEXANDRIA_VERSION_MAJOR 1)
 set(MALEXANDRIA_VERSION_MINOR 0)
 set(MALEXANDRIA_VERSION_REVISION 0)
@@ -88,9 +92,9 @@ add_executable(malexandria ${HEADER_FILES} ${SRC_FILES})
 set_target_properties(malexandria PROPERTIES LINKER_LANGUAGE CXX)
 
 if (WIN32)
-  target_link_libraries(malexandria PUBLIC argparse cryptopp nlohmann_json ZLIB::ZLIB zip sqlite3 ssh crypt32)
+  target_link_libraries(malexandria PUBLIC argparse cryptopp nlohmann_json ZLIB::ZLIB zip sqlite3 ssh crypt32 fmt-header-only)
 else()
-  target_link_libraries(malexandria PUBLIC argparse cryptopp nlohmann_json ZLIB::ZLIB zip sqlite3 ssh ncurses)
+  target_link_libraries(malexandria PUBLIC argparse cryptopp nlohmann_json ZLIB::ZLIB zip sqlite3 ssh ncurses fmt-header-only)
 endif()
 
 target_include_directories(malexandria PUBLIC

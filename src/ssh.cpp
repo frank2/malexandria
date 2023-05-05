@@ -268,6 +268,82 @@ int SSHChannel::exit_code(void) {
    return ssh_channel_get_exit_status(**this);
 }
 
+void SCPSession::allocate(std::shared_ptr<ssh_session_struct> session, SCPSession::Mode mode, const std::string &location) {
+   auto scp_object = ssh_scp_new(session.get(), static_cast<int>(mode), location.c_str());
+
+   if (scp_object == nullptr)
+      throw exception::SSHException(ssh_get_error(session.get()));
+
+   this->_session = session;
+   this->_scp = std::shared_ptr<ssh_scp_struct>(scp_object, ssh_scp_free);
+}
+
+void SCPSession::init(void) {
+   if (ssh_scp_init(**this) != SSH_OK)
+      throw exception::SSHException(ssh_get_error(this->_session.get()));
+}
+
+void SCPSession::close(void) {
+   ssh_scp_close(**this);
+   this->_scp.reset();
+}
+
+void SCPSession::push_directory(const std::string &dir, std::filesystem::perms mode) {
+   if (ssh_scp_push_directory(**this, dir.c_str(), static_cast<int>(mode)) != SSH_OK)
+      throw exception::SSHException(ssh_get_error(this->_session.get()));
+}
+
+void SCPSession::push_file(const std::string &filename, std::uint32_t size, std::filesystem::perms mode) {
+   if (ssh_scp_push_file(**this, filename.c_str(), size, static_cast<int>(mode)) != SSH_OK)
+      throw exception::SSHException(ssh_get_error(this->_session.get()));
+}
+
+void SCPSession::push_file64(const std::string &filename, std::uint64_t size, std::filesystem::perms mode) {
+   if (ssh_scp_push_file64(**this, filename.c_str(), size, static_cast<int>(mode)) != SSH_OK)
+      throw exception::SSHException(ssh_get_error(this->_session.get()));
+}
+
+void SCPSession::write(const std::vector<std::uint8_t> &data) {
+   if (ssh_scp_write(**this, data.data(), data.size()) != SSH_OK)
+      throw exception::SSHException(ssh_get_error(this->_session.get()));
+}
+
+int SCPSession::pull_request(void) {
+   return ssh_scp_pull_request(**this);
+}
+
+std::uint32_t SCPSession::request_size(void) {
+   return ssh_scp_request_get_size(**this);
+}
+
+std::uint64_t SCPSession::request_size64(void) {
+   return ssh_scp_request_get_size64(**this);
+}
+
+std::string SCPSession::request_filename(void) {
+   return ssh_scp_request_get_filename(**this);
+}
+
+std::filesystem::perms SCPSession::request_permissions(void) {
+   return static_cast<std::filesystem::perms>(ssh_scp_request_get_permissions(**this));
+}
+
+void SCPSession::accept_request(void) {
+   ssh_scp_accept_request(**this);
+}
+
+std::vector<std::uint8_t> SCPSession::read(std::size_t size) {
+   std::vector<std::uint8_t> data(size);
+   auto result = ssh_scp_read(**this, data.data(), size);
+
+   if (result == SSH_ERROR)
+      throw exception::SSHException(ssh_get_error(this->_session.get()));
+
+   data.resize(result);
+
+   return data;
+}
+
 void SSHSession::allocate(void) {
    auto session_obj = ssh_new();
 
@@ -721,15 +797,310 @@ ExecResult SSHSession::exec(const std::string &command, std::optional<std::vecto
 
    this->destroy_channel(channel_id);
 
-   return std::make_tuple(exit_code, fds.first, fds.second);
+   return {exit_code, fds.first, fds.second};
 }
 
-ExecResult SSHSession::exec(const std::string &command, std::optional<std::string> input) {
-   if (input.has_value())
-   {
-      std::vector<std::uint8_t> vec(input->begin(), input->end());
-      return this->exec(command, vec);
-   }
+ExecResult SSHSession::exec(const std::string &command, std::string input) {
+   std::vector<std::uint8_t> vec(input.begin(), input.end());
+   return this->exec(command, vec);
+}
+
+void SSHSession::upload(const std::filesystem::path &local_file, const std::filesystem::path &target)
+{
+   if (!path_exists(local_file))
+      throw exception::FileNotFound(local_file.string());
+
+   std::string target_root;
+
+   if (!target.has_parent_path())
+      target_root = ".";
    else
-      return this->exec(command, std::optional<std::vector<std::uint8_t>>(std::nullopt));
+      target_root = dos_to_unix_path(target.parent_path().string());
+
+   auto scp = SCPSession(this->_session, SCPSession::Mode::Write, target_root);
+   scp.init();
+
+   auto file_size = std::filesystem::file_size(local_file);
+   auto perms = std::filesystem::status(local_file).permissions();
+   
+   if (target.has_filename())
+      scp.push_file64(target.filename().string().c_str(), file_size, perms);
+   else if (local_file.has_filename())
+      scp.push_file64(local_file.filename().string().c_str(), file_size, perms);
+   else
+      throw exception::NoFilename();
+
+   std::ifstream disk_file(local_file.string(), std::ios::binary);
+
+   if (!disk_file)
+      throw exception::OpenFileFailure(local_file.string());
+
+   const std::size_t limit = 1024*1024;
+   std::vector<std::uint8_t> buffer(limit);
+   std::size_t bytes_written = 0;
+
+   while (bytes_written < file_size)
+   {
+      disk_file.read(reinterpret_cast<char *>(buffer.data()), limit);
+      auto chunk_written = disk_file.gcount();
+
+      if (chunk_written == limit)
+         scp.write(buffer);
+      else
+         scp.write(std::vector<std::uint8_t>(buffer.data(), buffer.data()+chunk_written));
+      
+      bytes_written += chunk_written;
+   }
+
+   disk_file.close();
+   scp.close();
+}
+
+void SSHSession::upload(const std::vector<std::uint8_t> &vec, std::filesystem::perms mode, const std::filesystem::path &target)
+{
+   std::string target_root;
+
+   if (!target.has_parent_path())
+      target_root = ".";
+   else
+      target_root = dos_to_unix_path(target.parent_path().string());
+
+   auto scp = SCPSession(this->_session, SCPSession::Mode::Write, target_root);
+   scp.init();
+
+   auto file_size = vec.size();
+   
+   if (target.has_filename())
+      scp.push_file64(target.filename().string().c_str(), file_size, mode);
+   else
+      throw exception::NoFilename();
+
+   scp.write(vec);
+   scp.close();
+}
+
+void SSHSession::download(const std::filesystem::path &remote_file, const std::filesystem::path &target) {
+   auto remote_string = dos_to_unix_path(remote_file.string());
+   auto scp = SCPSession(this->_session, SCPSession::Mode::Read, remote_string);
+   scp.init();
+
+   if (scp.pull_request() != SSH_SCP_REQUEST_NEWFILE)
+      throw exception::SSHException(ssh_get_error(**this));
+
+   auto file_size = scp.request_size64();
+   auto mode = scp.request_permissions();
+
+   std::ofstream disk_file(target.string(), std::ios::binary);
+
+   if (!disk_file)
+      throw exception::OpenFileFailure(target.string());
+
+   scp.accept_request();
+
+   std::size_t bytes_read = 0;
+
+   while (bytes_read < file_size)
+   {
+      auto buffer = scp.read(1024*1024);
+      disk_file.write(reinterpret_cast<char*>(buffer.data()), buffer.size());
+      bytes_read += buffer.size();
+   }
+
+   disk_file.close();
+
+   if (scp.pull_request() != SSH_SCP_REQUEST_EOF)
+      throw exception::SSHException(ssh_get_error(**this));
+   
+   scp.close();
+}
+
+std::vector<std::uint8_t> SSHSession::download(const std::filesystem::path &remote_file)
+{
+   auto remote_string = dos_to_unix_path(remote_file.string());
+   auto scp = SCPSession(this->_session, SCPSession::Mode::Read, remote_string);
+   scp.init();
+
+   if (scp.pull_request() != SSH_SCP_REQUEST_NEWFILE)
+      throw exception::SSHException(ssh_get_error(**this));
+
+   auto file_size = scp.request_size64();
+
+   scp.accept_request();
+
+   auto data = scp.read(file_size);
+
+   if (scp.pull_request() != SSH_SCP_REQUEST_EOF)
+      throw exception::SSHException(ssh_get_error(**this));
+   
+   scp.close();
+
+   return data;
+}
+
+SSHSession::Environment SSHSession::get_environment(void) {
+   if (!this->_env.has_value())
+   {
+      Logger::DebugN("performing shell test...");
+      auto result = this->exec("which sh"); // shell test
+      Logger::DebugN("exit code {}:\nstdout: {}\nstderr: {}",
+                     result.exit_code,
+                     std::string(result.output.begin(), result.output.end()),
+                     std::string(result.error.begin(), result.error.end()));
+   
+      if (result.exit_code == 0 && result.output.size() > 0)
+      {
+         Logger::DebugN("remote is shell.");
+         this->_env = Environment::Shell;
+      }
+   }
+
+   if (!this->_env.has_value())
+   {
+      Logger::DebugN("performing powershell test...");
+      auto result = this->exec("Get-Command powershell"); // powershell test
+      Logger::DebugN("exit code {}:\nstdout: {}\nstderr: {}",
+                     result.exit_code,
+                     std::string(result.output.begin(), result.output.end()),
+                     std::string(result.error.begin(), result.error.end()));
+      
+      if (result.exit_code == 0 && result.output.size() > 0)
+      {
+         Logger::DebugN("remote is powershell.");
+         this->_env = Environment::PowerShell;
+      }
+   }
+
+   if (!this->_env.has_value())
+   {
+      Logger::DebugN("performing cmd test...");
+      auto result = this->exec("where cmd"); // cmd test
+      Logger::DebugN("exit code {}:\nstdout: {}\nstderr: {}",
+                     result.exit_code,
+                     std::string(result.output.begin(), result.output.end()),
+                     std::string(result.error.begin(), result.error.end()));
+
+      if (result.exit_code == 0 && result.output.size() > 0)
+      {
+         Logger::DebugN("remote is cmd.");
+         this->_env = Environment::CMD;
+      }
+   }
+
+   if (!this->_env.has_value())
+   {
+      Logger::DebugN("remote is unknown.");
+      this->_env = Environment::Unknown;
+   }
+
+   return *this->_env;
+}
+
+std::filesystem::path SSHSession::temp_file(void) {
+   auto env = this->get_environment();
+
+   switch(env)
+   {
+   case Environment::Shell:
+   {
+      auto result = this->exec("mktemp");
+
+      if (result.exit_code != 0)
+         throw exception::RemoteCommandFailure("mktemp", std::string(result.error.begin(), result.error.end()));
+
+      return std::string(result.output.begin(), result.output.end()-1);
+   }
+
+   case Environment::PowerShell:
+   {
+      auto result = this->exec("$TempFile = New-TemporaryFile; echo \"$TempFile\"");
+
+      if (result.exit_code != 0)
+         throw exception::RemoteCommandFailure("New-TemporaryFile", std::string(result.error.begin(), result.error.end()));
+
+      return std::string(result.output.begin(), result.output.end()-1);
+   }
+
+   case Environment::CMD:
+   {
+      auto result = this->exec("echo %TMP%/malexandria.%RANDOM%-%RANDOM%.tmp");
+
+      if (result.exit_code != 0)
+         throw exception::RemoteCommandFailure("echo", std::string(result.error.begin(), result.error.end()));
+
+      return std::string(result.output.begin(), result.output.end()-1);
+   }
+
+   case Environment::Unknown:
+   default:
+      throw exception::UnknownSSHEnvironment();
+   }
+}
+
+void SSHSession::remove_file(const std::filesystem::path &filename) {
+   auto env = this->get_environment();
+   auto unix_filename = dos_to_unix_path(filename.string());
+
+   switch(env)
+   {
+   case Environment::Shell:
+   {
+      auto result = this->exec(fmt::format("rm \"{}\"", unix_filename));
+
+      if (result.exit_code != 0)
+         throw exception::RemoteCommandFailure("rm", std::string(result.error.begin(), result.error.end()));
+
+      break;
+   }
+
+   case Environment::PowerShell:
+   {
+      auto result = this->exec(fmt::format("Remove-Item \"{}\"", unix_filename));
+
+      if (result.exit_code != 0)
+         throw exception::RemoteCommandFailure("Remove-Item", std::string(result.error.begin(), result.error.end()));
+
+      break;
+   }
+
+   case Environment::CMD:
+   {
+      auto result = this->exec("del \"{}\"", unix_filename);
+
+      if (result.exit_code != 0)
+         throw exception::RemoteCommandFailure("del", std::string(result.error.begin(), result.error.end()));
+
+      break;
+   }
+
+   case Environment::Unknown:
+      throw exception::UnknownSSHEnvironment();
+   }
+}
+
+std::optional<std::filesystem::path> SSHSession::which(const std::string &program_name)
+{
+   auto env = this->get_environment();
+   ExecResult result;
+
+   switch(env)
+   {
+   case Environment::Shell:
+      result = this->exec(fmt::format("which {}", program_name));
+      break;
+      
+   case Environment::PowerShell:
+      result = this->exec(fmt::format("echo (Get-Command {}).Source", program_name));
+      break;
+
+   case Environment::CMD:
+      result = this->exec(fmt::format("where {}", program_name));
+
+   case Environment::Unknown:
+      throw exception::UnknownSSHEnvironment();
+   }
+
+   if (result.exit_code != 0)
+      return std::nullopt;
+
+   return std::string(result.output.begin(), result.output.end()-1);
 }

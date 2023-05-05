@@ -17,6 +17,7 @@ namespace malexandria
    bool erase_file(const std::filesystem::path &path);
    bool directory_is_empty(const std::filesystem::path &path);
    void clear_directory(const std::filesystem::path &root, const std::filesystem::path &path);
+   std::string dos_to_unix_path(const std::string &path);
 }
 
 #endif

@@ -602,6 +602,37 @@ namespace exception
    public:
       SSHOutputTruncated() : Exception("SSH output truncated: not all output was received from the SSH channel.") {}
    };
+
+   class NoFilename : public Exception
+   {
+   public:
+      NoFilename() : Exception("No filename: no filename was provided in the path expression.") {}
+   };
+
+   class RemoteCommandFailure : public Exception
+   {
+   public:
+      std::string command;
+      std::string error_output;
+
+      RemoteCommandFailure(const std::string &command, const std::string &error_output)
+         : command(command),
+           error_output(error_output),
+           Exception()
+      {
+         std::stringstream stream;
+
+         stream << "Remote command failure: the following command failed on the remote server: " << command;
+
+         this->error = stream.str();
+      }
+   };
+
+   class UnknownSSHEnvironment : public Exception
+   {
+   public:
+      UnknownSSHEnvironment() : Exception("Unknown SSH environment: failed to detect the remote SSH environment.") {}
+   };
 }}
 
 #endif

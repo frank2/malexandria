@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -149,13 +151,79 @@ namespace malexandria
       int exit_code();
    };
 
-   using ExecResult = std::tuple<int,std::vector<std::uint8_t>,std::vector<std::uint8_t>>;
+   class SCPSession
+   {
+      friend SSHSession;
+      
+   public:
+      enum class Mode : int
+      {
+         Read = SSH_SCP_READ,
+         Write = SSH_SCP_WRITE,
+         Recursive = SSH_SCP_RECURSIVE
+      };
+
+   private:
+      std::shared_ptr<ssh_scp_struct> _scp;
+      std::shared_ptr<ssh_session_struct> _session;
+
+      void allocate(std::shared_ptr<ssh_session_struct> session, Mode mode, const std::string &location);
+      SCPSession(std::shared_ptr<ssh_session_struct> session, Mode mode, const std::string &location) { this->allocate(session, mode, location); }
+      SCPSession(const SCPSession &other) : _scp(other._scp) {}
+
+      SCPSession &operator=(const SCPSession &other) {
+         this->_scp = other._scp;
+
+         return *this;
+      }
+
+   public:
+      ~SCPSession() {
+         if (this->_scp != nullptr && this->_scp.use_count() <= 1)
+            this->close();
+      }
+
+      ssh_scp operator*() { return this->_scp.get(); }
+
+      void init();
+      void close();
+      
+      void push_directory(const std::string &dir, std::filesystem::perms mode);
+      void push_file(const std::string &filename, std::uint32_t size, std::filesystem::perms mode);
+      void push_file64(const std::string &filename, std::uint64_t size, std::filesystem::perms mode);
+      void write(const std::vector<std::uint8_t> &data);
+
+      int pull_request();
+      std::uint32_t request_size();
+      std::uint64_t request_size64();
+      std::string request_filename();
+      std::filesystem::perms request_permissions();
+      void accept_request();
+      std::vector<std::uint8_t> read(std::size_t size);
+   };
+
+   struct ExecResult
+   {
+      int exit_code;
+      std::vector<std::uint8_t> output;
+      std::vector<std::uint8_t> error;
+   };
             
    class SSHSession
    {
+   public:
+      enum class Environment : std::uint8_t
+      {
+         Shell = 0,
+         PowerShell,
+         CMD,
+         Unknown,
+      };
+      
       std::shared_ptr<ssh_session_struct> _session;
       std::vector<SSHKeyPair> _keys;
       std::vector<std::shared_ptr<SSHChannel>> _channels;
+      std::optional<Environment> _env;
 
       void allocate();
       void validate_host();
@@ -185,7 +253,12 @@ namespace malexandria
                this->set_port(*port);
          }
       }
-      SSHSession(const SSHSession &other) : _session(other._session), _keys(other._keys) {}
+      SSHSession(const SSHSession &other)
+         : _session(other._session),
+           _keys(other._keys),
+           _channels(other._channels),
+           _env(other._env)
+      {}
       ~SSHSession() {
          if (this->is_connected())
             this->disconnect();
@@ -194,6 +267,8 @@ namespace malexandria
       SSHSession &operator=(const SSHSession &other) {
          this->_session = other._session;
          this->_keys = other._keys;
+         this->_channels = other._channels;
+         this->_env = other._env;
 
          return *this;
       }
@@ -227,7 +302,18 @@ namespace malexandria
       void destroy_channel(std::size_t index);
 
       ExecResult exec(const std::string &command, std::optional<std::vector<std::uint8_t>> input=std::nullopt);
-      ExecResult exec(const std::string &command, std::optional<std::string> input=std::nullopt);
+      ExecResult exec(const std::string &command, std::string input);
+
+      void upload(const std::filesystem::path &local_file, const std::filesystem::path &target);
+      void upload(const std::vector<std::uint8_t> &vec, std::filesystem::perms mode, const std::filesystem::path &target);
+
+      void download(const std::filesystem::path &remote_file, const std::filesystem::path &target);
+      std::vector<std::uint8_t> download(const std::filesystem::path &remote_file);
+
+      Environment get_environment(void);
+      std::filesystem::path temp_file(void);
+      void remove_file(const std::filesystem::path &filename);
+      std::optional<std::filesystem::path> which(const std::string &program_name);
    };
 }
 

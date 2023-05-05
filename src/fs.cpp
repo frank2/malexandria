@@ -35,3 +35,10 @@ void malexandria::clear_directory(const std::filesystem::path &root, const std::
       target = target.parent_path();
    }
 }
+
+std::string malexandria::dos_to_unix_path(const std::string &path) {
+   auto result = path;
+   std::replace(result.begin(), result.end(), '\\', '/');
+
+   return result;
+}

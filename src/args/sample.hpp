@@ -1,6 +1,7 @@
 #ifndef __MALEXANDRIA_ARGS_SAMPLE_HPP
 #define __MALEXANDRIA_ARGS_SAMPLE_HPP
 
+#include <cstdlib>
 #include <set>
 
 #include "exception.hpp"
@@ -1012,7 +1013,7 @@ namespace malexandria
                .default_value(false)
                .implicit_value(true);
 
-            this->add_argument("-p", "--password")
+            this->add_argument("-P", "--password")
                .help("The password to use on the sample archive. If no password is supplied, the config's password is used.");
 
             this->add_argument("-a", "--alias")
@@ -1234,41 +1235,124 @@ namespace malexandria
          }
 
          bool execute(Module &root) {
-            auto children = this->get<bool>("--children");
-            auto parents = this->get<bool>("--parents");
-            auto descendants = this->get<bool>("--descendants");
-            auto ancestors = this->get<bool>("--ancestors");
+            auto export_children = this->get<bool>("--children");
+            auto export_parents = this->get<bool>("--parents");
+            auto export_descendants = this->get<bool>("--descendants");
+            auto export_ancestors = this->get<bool>("--ancestors");
             auto ssh = this->present("--ssh");
-            auto samples = this->get<std::vector<std::string>>("sample");
+            auto sample_ids = this->get<std::vector<std::string>>("sample");
 
-            Logger::DebugN("testing ssh");
-            auto session = SSHSession("teal@localhost");
-            auto verbosity = SSH_LOG_FUNCTIONS;
-            //session.set_option(SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
-
-            auto key = SSHKeyPair(std::filesystem::path("C:/cygwin64/home/purple/.ssh/id_dongs"));
-            session.add_key(key);
+            if (!ssh.has_value())
+               throw exception::Exception("No SSH site given");
             
-            Logger::DebugN("connecting to SSH site.");
-            session.connect();
-            Logger::DebugN("authenticating with SSH site.");
-            session.authenticate();
-
-            Logger::DebugN("connected. executing a command...");
-            int exit_code;
-            std::vector<std::uint8_t> out_bytes, err_bytes;
-            std::string out_string, err_string;
+            std::size_t child_depth = 0, paternal_depth = 0;
+            std::vector<Sample> visiting, queue, exporting;
+            std::set<std::int64_t> visited, parent_set, child_set;
             
-            std::tie(exit_code, out_bytes, err_bytes) = session.exec("cat - > dongs && cat dongs && sha256sum dongs && echo pricks 1>&2", "dingleberry\n");
-            out_string = std::string(out_bytes.begin(), out_bytes.end());
-            err_string = std::string(err_bytes.begin(), err_bytes.end());
-            
-            Logger::DebugN("exit code: {}", exit_code);
-            Logger::DebugN("stdout: {}", out_string);
-            Logger::DebugN("stderr: {}", err_string);
+            for (auto &id : sample_ids)
+               queue.push_back(Sample::FromIdentifier(id));
 
-            Logger::DebugN("disconnecting...");
-            session.disconnect();
+            while (queue.size() > 0)
+            {
+               visiting = queue;
+               queue.clear();
+
+               for (auto &sample : visiting)
+               {
+                  if (visited.find(sample.row_id()) != visited.end())
+                     continue;
+                  
+                  visited.insert(sample.row_id());
+
+                  Logger::InfoN("adding {} to export set", sample.label());
+                  exporting.push_back(sample);
+
+                  auto parents = sample.parents();
+                  auto children = sample.children();
+                  
+                  if ((parent_set.size() == 0 || parent_set.find(sample.row_id()) != parent_set.end()) && ((export_parents && paternal_depth < 1) || export_ancestors))
+                  {
+                     for (auto &parent : parents)
+                     {
+                        parent_set.insert(parent.row_id());
+                        
+                        if (visited.find(parent.row_id()) == visited.end())
+                        {
+                           Logger::DebugN("adding parent {} to queue", parent.label());
+                           queue.push_back(parent);
+                        }
+                     }
+                  }
+                  
+                  if ((child_set.size() == 0 || child_set.find(sample.row_id()) != child_set.end()) && ((export_children && child_depth < 1) || export_descendants))
+                  {
+                     for (auto &child : children)
+                     {
+                        child_set.insert(child.row_id());
+                        
+                        if (visited.find(child.row_id()) == visited.end())
+                        {
+                           Logger::DebugN("adding child {} to queue", child.label());
+                           queue.push_back(child);
+                        }
+                     }
+                  }
+               }
+
+               ++paternal_depth;
+               ++child_depth;
+            }
+
+            Logger::InfoN("exporting {} samples", exporting.size());
+            std::string temp_name = std::tmpnam(nullptr);
+            Logger::DebugN("exporting samples to {}", temp_name);
+            auto proper_temp_name = Sample::Export(exporting, temp_name);
+            Logger::DebugN("finished exporting samples.");
+
+            try {
+               Logger::InfoN("connecting to {}...", *ssh);
+               auto session = SSHSession(*ssh);
+               session.connect();
+
+               Logger::InfoN("authenticating...");
+               session.authenticate();
+
+               Logger::InfoN("successfully connected to remote server.");
+               Logger::DebugN("checking for malexandria...");
+               
+               if (!session.which("malexandria").has_value())
+                  throw exception::Exception(fmt::format("Malexandria not installed at {}.", *ssh));
+
+               Logger::DebugN("malexandria installed!");
+               
+               Logger::DebugN("getting tempfile to upload to...");
+               auto remote_tmp = session.temp_file();
+               Logger::DebugN("got {}", remote_tmp.string());
+               
+               Logger::InfoN("uploading exported samples in {} to {}:{}...", proper_temp_name.string(), *ssh, remote_tmp.string());
+               session.upload(proper_temp_name, remote_tmp);
+               Logger::InfoN("uploaded!");
+
+               Logger::InfoN("importing into remote malexandria instance...");
+               auto result = session.exec(fmt::format("malexandria sample import -m -P \"{}\" \"{}\"",
+                                                      MainConfig::GetInstance().zip_password(),
+                                                      remote_tmp.string()));
+               Logger::DebugN("exit code: {}", result.exit_code);
+               Logger::DebugN("stdout: {}", std::string(result.output.begin(), result.output.end()));
+               Logger::DebugN("stderr: {}", std::string(result.error.begin(), result.error.end()));
+               Logger::InfoN("imported!");
+
+               Logger::DebugN("removing remote temp file...");
+               session.remove_file(remote_tmp);
+
+               Logger::DebugN("removing local temp file...");
+               erase_file(proper_temp_name);
+            }
+            catch (exception::Exception &exc)
+            {
+               erase_file(proper_temp_name);
+               throw exc;
+            }
 
             return true;
          }

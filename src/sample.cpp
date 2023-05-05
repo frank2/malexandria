@@ -256,10 +256,10 @@ std::filesystem::path Sample::Export(const std::vector<Sample> &samples, std::op
    auto active_path = std::filesystem::path(main_config.active_path());
    
    if (!filename.has_value())
-      filename = std::filesystem::path(main_config.active_path()) / std::string("export.mlxsample");
+      filename = std::filesystem::path(main_config.active_path()) / std::string("export.mlx");
 
-   if (filename->extension().string() != ".mlxsample")
-      *filename += std::string(".mlxsample");
+   if (filename->extension().string() != ".mlx")
+      *filename += std::string(".mlx");
 
    Logger::DebugN("export filename: {}", filename->string());
 

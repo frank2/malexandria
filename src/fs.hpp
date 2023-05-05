@@ -1,6 +1,7 @@
 #ifndef __MALEXANDRIA_FS_HPP
 #define __MALEXANDRIA_FS_HPP
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>

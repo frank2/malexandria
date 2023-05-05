@@ -984,14 +984,14 @@ namespace malexandria
                ++child_depth;
             }
 
-            Logger::InfoN("exporting {} samples", exporting.size());
-
             if (filename.has_value())
                Logger::InfoN("exporting to {}", *filename);
 
             auto result = Sample::Export(exporting, filename);
 
             Logger::InfoN("samples exported to {}", result.string());
+
+            std::cout << result.string() << std::endl;
                            
             return true;
          }
@@ -1224,8 +1224,8 @@ namespace malexandria
                .default_value(false)
                .implicit_value(true);
 
-            this->add_argument("-s", "--ssh")
-               .help("The SSH site to upload the samples to.")
+            this->add_argument("-m", "--malexandria")
+               .help("The Malexandria site to upload the samples to.")
                .metavar("SSH_URI");
 
             this->add_argument("sample")
@@ -1239,11 +1239,11 @@ namespace malexandria
             auto export_parents = this->get<bool>("--parents");
             auto export_descendants = this->get<bool>("--descendants");
             auto export_ancestors = this->get<bool>("--ancestors");
-            auto ssh = this->present("--ssh");
+            auto ssh = this->present("--malexandria");
             auto sample_ids = this->get<std::vector<std::string>>("sample");
 
             if (!ssh.has_value())
-               throw exception::Exception("No SSH site given");
+               throw exception::Exception("No Malexandria site given");
             
             std::size_t child_depth = 0, paternal_depth = 0;
             std::vector<Sample> visiting, queue, exporting;
@@ -1340,6 +1340,13 @@ namespace malexandria
                Logger::DebugN("exit code: {}", result.exit_code);
                Logger::DebugN("stdout: {}", std::string(result.output.begin(), result.output.end()));
                Logger::DebugN("stderr: {}", std::string(result.error.begin(), result.error.end()));
+
+               if (result.exit_code != 0)
+                  throw exception::RemoteCommandFailure(fmt::format("malexandria sample import -m -P \"{}\" \"{}\"",
+                                                                    MainConfig::GetInstance().zip_password(),
+                                                                    remote_tmp.string()),
+                                                        std::string(result.error.begin(), result.error.end()));
+               
                Logger::InfoN("imported!");
 
                Logger::DebugN("removing remote temp file...");
@@ -1358,6 +1365,115 @@ namespace malexandria
          }
       };
 
+      struct DownloadFunction : public Module
+      {
+         DownloadFunction()
+            : Module("download",
+                     "Download samples from various sources.")
+         {
+            this->add_argument("-m", "--malexandria")
+               .help("Download from a remote Malexandria site.")
+               .metavar("SSH_URI");
+            
+            this->add_argument("-c", "--children")
+               .help("Get the children of this sample as well.")
+               .default_value(false)
+               .implicit_value(true);
+
+            this->add_argument("-p", "--parents")
+               .help("Get the parents of this sample as well.")
+               .default_value(false)
+               .implicit_value(true);
+
+            this->add_argument("-d", "--descendants")
+               .help("Recursively get children and all their children.")
+               .default_value(false)
+               .implicit_value(true);
+
+            this->add_argument("-a", "--ancestors")
+               .help("Recursively get parents and all their parents.")
+               .default_value(false)
+               .implicit_value(true);
+            
+            this->add_argument("sample")
+               .help("The sample identifiers to get.")
+               .remaining()
+               .required();
+         }
+
+         virtual bool execute(Module &root) {
+            auto download_children = this->get<bool>("--children");
+            auto download_parents = this->get<bool>("--parents");
+            auto download_descendants = this->get<bool>("--descendants");
+            auto download_ancestors = this->get<bool>("--ancestors");
+            auto mlx = this->present("--malexandria");
+            auto sample_ids = this->get<std::vector<std::string>>("sample");
+
+            if (!mlx.has_value())
+               throw exception::Exception("No Malexandria site given.");
+
+            Logger::InfoN("connecting to mlx site {}...", *mlx);
+            auto session = SSHSession(*mlx);
+            session.connect();
+
+            Logger::InfoN("authenticating with site...");
+            session.authenticate();
+
+            Logger::InfoN("checking Malexandria installation...");
+            
+            if (!session.which("malexandria").has_value())
+               throw exception::Exception("Malexandria not found on remote site.");
+
+            Logger::DebugN("building export commandline...");
+            
+            auto remote_temp = session.temp_file();
+            std::string commandline = fmt::format("malexandria sample export --filename \"{}\"", dos_to_unix_path(remote_temp.string()));
+
+            if (download_children)
+               commandline = fmt::format("{} --children", commandline);
+
+            if (download_parents)
+               commandline = fmt::format("{} --parents", commandline);
+
+            if (download_descendants)
+               commandline = fmt::format("{} --descendants", commandline);
+
+            if (download_ancestors)
+               commandline = fmt::format("{} --ancestors", commandline);
+
+            for (auto &id : sample_ids)
+               commandline = fmt::format("{} {}", commandline, id);
+
+            Logger::DebugN("built commandline: {}", commandline);
+            Logger::InfoN("exporting samples in remote site...");
+            auto result = session.exec(commandline);
+            Logger::DebugN("exit code: {}", result.exit_code);
+            Logger::DebugN("stdout: {}", std::string(result.output.begin(), result.output.end()));
+            Logger::DebugN("stderr: {}", std::string(result.error.begin(), result.error.end()));
+
+            if (result.exit_code != 0)
+               throw exception::RemoteCommandFailure(commandline, std::string(result.error.begin(), result.error.end()));
+
+            auto export_file = std::string(result.output.begin(), result.output.end());
+            std::string local_temp = std::tmpnam(nullptr);
+
+            Logger::InfoN("downloading remote export file {} to {}...", export_file, local_temp);
+            session.download(export_file, local_temp);
+
+            Logger::InfoN("importing downloaded samples...");
+            Sample::Import(local_temp); // FIXME account for differently configured passwords on the remote site
+            Logger::InfoN("samples imported!");
+
+            session.remove_file(export_file);
+            session.remove_file(remote_temp);
+            erase_file(local_temp);
+            
+            session.disconnect();
+
+            return true;
+         }
+      };
+
       SampleModule()
          : Module("sample",
                   "Add, configure, remove and transport stored malware samples.",
@@ -1369,7 +1485,8 @@ namespace malexandria
                      std::make_shared<InfoFunction>(),
                      std::make_shared<ExportFunction>(),
                      std::make_shared<ImportFunction>(),
-                     std::make_shared<UploadFunction>()
+                     std::make_shared<UploadFunction>(),
+                     std::make_shared<DownloadFunction>()
                   })
       {}
    };

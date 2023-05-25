@@ -339,8 +339,8 @@ namespace malexandria
                auto filename = zip_check.get_name(0);
                Sample sample;
 
-               sample.load_data(zip_check.extract_to_memory(0));
-               sample.set_filename(zip_check.get_name(0));
+               sample.load_data(zip_check.extract_to_memory(static_cast<std::uint64_t>(0)));
+               sample.set_filename(zip_check.get_name(static_cast<std::uint64_t>(0)));
 
                if (!sample.is_saved())
                {

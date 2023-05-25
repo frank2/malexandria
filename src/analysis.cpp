@@ -1639,7 +1639,7 @@ void Analysis::save(void) {
             }
             else {
                Logger::Raw(Logger::Level::Debug, "deleted and removed.\n");
-               archive.delete_file(file_entry.first);
+               archive.delete_file(static_cast<std::uint64_t>(file_entry.first));
                deleted_files.push_back(file_entry.second);
             }
          }

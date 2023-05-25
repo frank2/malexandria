@@ -296,7 +296,7 @@ std::int64_t Zip::insert_file(const std::filesystem::path &filename, const std::
 
    if (file_index >= 0)
    {
-      auto stat = this->stat(file_index);
+      auto stat = this->stat(static_cast<std::uint64_t>(file_index));
       auto crc = crc32(filename);
 
       if (crc == stat.crc)

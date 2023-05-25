@@ -54,3 +54,20 @@ std::vector<std::uint8_t> malexandria::from_hex_string(const std::string &str) {
 
    return result;
 }
+
+void malexandria::binary_io(void) {
+#if defined(MALEXANDRIA_WIN32)
+   auto result = _setmode(_fileno(stdin), _O_BINARY);
+
+   if (result == -1)
+      throw exception::Exception("_setmode failed.");
+
+   result = _setmode(_fileno(stdout), _O_BINARY);
+
+   if (result == -1)
+      throw exception::Exception("_setmode failed.");
+#endif
+   return;
+}
+
+

@@ -10,6 +10,10 @@ const json &Config::operator[](const json &key) const {
    return this->_data[key];
 }
 
+bool Config::has_key(const json &data) const {
+   return this->_data.find(data) != this->_data.end();
+}
+
 void Config::from_file(const std::filesystem::path &filename) {
    if (!path_exists(filename))
       throw exception::FileNotFound(filename.string());
@@ -86,6 +90,7 @@ MainConfig::MainConfig(void) : Config() {
 
       default_config["paths"]["vault"] = path_root.string() + std::string("/vault");
       default_config["paths"]["active"] = path_root.string() + std::string("/active");
+      default_config["paths"]["analysis"] = path_root.string() + std::string("/analysis");
       default_config["paths"]["database"] = path_root.string() + std::string("/db.sqlite3");
       default_config["zip_password"] = "infected";
       default_config["benign_extension"] = "000";
@@ -157,6 +162,20 @@ void MainConfig::set_active_path(const std::string &path) {
    this->save();
 }
 
+std::string MainConfig::analysis_path(void) const {
+   try {
+      return (*this)["paths"]["analysis"].get<std::string>();
+   }
+   catch (std::exception &exc) {
+      throw exception::JSONException(exc);
+   }
+}
+
+void MainConfig::set_analysis_path(const std::string &path) {
+   (*this)["paths"]["analysis"] = path;
+   this->save();
+}
+
 std::string MainConfig::database(void) const {
    try {
       return (*this)["paths"]["database"].get<std::string>();
@@ -221,6 +240,13 @@ std::optional<std::string> MainConfig::log_level() const {
 }
 
 void MainConfig::set_log_level(const std::string &level) {
+   if (level != "silent" &&
+       level != "fatal" &&
+       level != "notice" &&
+       level != "info" &&
+       level != "debug")
+      throw exception::UnknownLogLevel(level);
+   
    (*this)["log_level"] = level;
 }
 

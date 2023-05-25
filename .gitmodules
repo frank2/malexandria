@@ -26,3 +26,6 @@
 [submodule "lib/libfmt"]
 	path = lib/libfmt
 	url = https://github.com/fmtlib/fmt.git
+[submodule "lib/stduuid"]
+	path = lib/stduuid
+	url = https://github.com/mariusbancila/stduuid

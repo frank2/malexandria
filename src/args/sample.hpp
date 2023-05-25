@@ -8,6 +8,7 @@
 #include "utility.hpp"
 
 #include "args/module.hpp"
+#include "export.hpp"
 #include "logger.hpp"
 #include "../sample.hpp"
 #include "ssh.hpp"
@@ -17,7 +18,7 @@ namespace malexandria
 {
    struct SampleModule : public Module
    {
-         struct AddFunction : public Module
+      struct AddFunction : public Module
       {
          AddFunction()
             : Module("add",
@@ -61,28 +62,28 @@ namespace malexandria
             auto children = this->present<std::vector<std::string>>("--child");
             auto sample = this->get<std::string>("sample");
 
-            Logger::DebugN("sample add:");
+            MLX_DEBUGN("sample add:");
 
             if (alias.has_value())
-               Logger::DebugN("   alias: {}", *alias);
+               MLX_DEBUGN("   alias: {}", *alias);
 
             if (tags.has_value())
                for (auto &tag : *tags)
-                  Logger::DebugN("   tag: {}", tag);
+                  MLX_DEBUGN("   tag: {}", tag);
 
             if (families.has_value())
                for (auto &family : *families)
-                  Logger::DebugN("   family: {}", family);
+                  MLX_DEBUGN("   family: {}", family);
 
             if (parents.has_value())
                for (auto &parent : *parents)
-                  Logger::DebugN("   parent: {}", parent);
+                  MLX_DEBUGN("   parent: {}", parent);
 
             if (children.has_value())
                for (auto &child : *children)
-                  Logger::DebugN("   child: {}", child);
+                  MLX_DEBUGN("   child: {}", child);
 
-            Logger::DebugN("   sample: {}", sample);
+            MLX_DEBUGN("   sample: {}", sample);
             
             Logger::Info("loading {}...", sample);
             auto sample_object = Sample::FromFile(sample);
@@ -117,7 +118,7 @@ namespace malexandria
 
                   if (!parent_object.is_saved())
                   {
-                     Logger::DebugN("fatal exception, deleting sample...");
+                     MLX_DEBUGN("fatal exception, deleting sample...");
                      sample_object.erase();
                      throw exception::SampleNotSaved();
                   }
@@ -141,7 +142,7 @@ namespace malexandria
 
                   if (!child_object.is_saved())
                   {
-                     Logger::DebugN("fatal exception, deleting sample...");
+                     MLX_DEBUGN("fatal exception, deleting sample...");
 
                      sample_object.erase();
                      throw exception::SampleNotSaved();
@@ -159,7 +160,7 @@ namespace malexandria
                
                if (Sample::IDFromAlias(*alias).has_value())
                {
-                  Logger::DebugN("fatal exception, deleting sample...");
+                  MLX_DEBUGN("fatal exception, deleting sample...");
                   sample_object.erase();
                   throw exception::AliasAlreadyExists(*alias);
                }
@@ -263,50 +264,50 @@ namespace malexandria
             auto filename = this->present<std::string>("--filename");
             auto sample = this->get<std::string>("sample");
 
-            Logger::DebugN("sample modify:");
-            Logger::DebugN("   delete: {}", del);
+            MLX_DEBUGN("sample modify:");
+            MLX_DEBUGN("   delete: {}", del);
 
             if (alias.has_value())
-               Logger::DebugN("   alias: {}", *alias);
+               MLX_DEBUGN("   alias: {}", *alias);
             else if (del && this->is_used("--alias"))
-               Logger::DebugN("   deleting alias");
+               MLX_DEBUGN("   deleting alias");
 
             if (tags.has_value())
             {
                for (auto &tag : *tags)
-                  Logger::DebugN("   tag: {}", tag);
+                  MLX_DEBUGN("   tag: {}", tag);
             }
             else if (del && this->is_used("--tag"))
-               Logger::DebugN("   deleting tags");
+               MLX_DEBUGN("   deleting tags");
 
             if (families.has_value())
             {
                for (auto &family : *families)
-                  Logger::DebugN("   family: {}", family);
+                  MLX_DEBUGN("   family: {}", family);
             }
             else if (del && this->is_used("--family"))
-               Logger::DebugN("   deleting families");
+               MLX_DEBUGN("   deleting families");
 
             if (parents.has_value())
             {
                for (auto &parent : *parents)
-                  Logger::DebugN("   parent: {}", parent);
+                  MLX_DEBUGN("   parent: {}", parent);
             }
             else if (del && this->is_used("--parent"))
-               Logger::DebugN("   deleting parents");
+               MLX_DEBUGN("   deleting parents");
 
             if (children.has_value())
             {
                for (auto &child : *children)
-                  Logger::DebugN("   child: {}", child);
+                  MLX_DEBUGN("   child: {}", child);
             }
             else if (del && this->is_used("--child"))
-               Logger::DebugN("   deleting children");
+               MLX_DEBUGN("   deleting children");
 
             if (filename.has_value())
-               Logger::DebugN("   filename: {}", *filename);
+               MLX_DEBUGN("   filename: {}", *filename);
            
-            Logger::DebugN("   sample: {}", sample);
+            MLX_DEBUGN("   sample: {}", sample);
             
             Logger::Info("loading {}...", sample);
             auto sample_object = Sample::FromIdentifier(sample);
@@ -591,16 +592,16 @@ namespace malexandria
                      Logger::InfoN("visiting {}", descendant.label());
                      visited.insert(descendant.sha256());
 
-                     Logger::DebugN("getting children of {}", descendant.label());
+                     MLX_DEBUGN("getting children of {}", descendant.label());
                      auto children = descendant.children();
 
-                     Logger::DebugN("adding {} children", children.size());
+                     MLX_DEBUGN("adding {} children", children.size());
                      visiting.insert(visiting.end(), children.begin(), children.end());
                   }
 
                   if (visited.size() > 0)
                   {
-                     Logger::Debug("adding {} visited samples to erase set...", visited.size());
+                     MLX_DEBUG("adding {} visited samples to erase set...", visited.size());
                      delete_set.insert(visited.begin(), visited.end());
                      Logger::Raw(Logger::Level::Debug, "done.\n");
                   }
@@ -633,16 +634,16 @@ namespace malexandria
                      Logger::InfoN("visiting {}", ancestor.label());
                      visited.insert(ancestor.sha256());
 
-                     Logger::DebugN("getting parents of {}", ancestor.label());
+                     MLX_DEBUGN("getting parents of {}", ancestor.label());
                      auto parents = ancestor.parents();
 
-                     Logger::DebugN("adding {} parents", parents.size());
+                     MLX_DEBUGN("adding {} parents", parents.size());
                      visiting.insert(visiting.end(), parents.begin(), parents.end());
                   }
 
                   if (visited.size() > 0)
                   {
-                     Logger::Debug("adding {} visited samples to erase set...", visited.size());
+                     MLX_DEBUG("adding {} visited samples to erase set...", visited.size());
                      delete_set.insert(visited.begin(), visited.end());
                      Logger::Raw(Logger::Level::Debug, "done.\n");
                   }
@@ -775,7 +776,7 @@ namespace malexandria
                   if (visited.find(sample.row_id()) != visited.end())
                      continue;
 
-                  Logger::DebugN("visiting {}", sample.label());
+                  MLX_DEBUGN("visiting {}", sample.label());
                   visited.insert(sample.row_id());
 
                   auto parents = sample.parents();
@@ -813,7 +814,7 @@ namespace malexandria
                      for (auto &child : children)
                         json_result[hash_id]["children"].push_back(to_hex_string(child.sha256()));
 
-                     Logger::DebugN("json_result: {}", json_result[hash_id].dump(4));
+                     MLX_DEBUGN("json_result: {}", json_result[hash_id].dump(4));
                   }
                   else
                   {
@@ -851,7 +852,7 @@ namespace malexandria
                         
                         if (visited.find(parent.row_id()) == visited.end())
                         {
-                           Logger::DebugN("adding parent {} to queue", parent.label());
+                           MLX_DEBUGN("adding parent {} to queue", parent.label());
                            queue.push_back(parent);
                         }
                      }
@@ -865,7 +866,7 @@ namespace malexandria
                         
                         if (visited.find(child.row_id()) == visited.end())
                         {
-                           Logger::DebugN("adding child {} to queue", child.label());
+                           MLX_DEBUGN("adding child {} to queue", child.label());
                            queue.push_back(child);
                         }
                      }
@@ -893,12 +894,12 @@ namespace malexandria
                .help("The filename to export the archive to. The default is \"[active directory]/export.mlxsample\"");
             
             this->add_argument("-c", "--children")
-               .help("Export the children of this sample as well.")
+               .help("Export the children of the given samples as well.")
                .default_value(false)
                .implicit_value(true);
 
             this->add_argument("-p", "--parents")
-               .help("Export the parents of this sample as well.")
+               .help("Export the parents of the given samples as well.")
                .default_value(false)
                .implicit_value(true);
 
@@ -959,7 +960,7 @@ namespace malexandria
                         
                         if (visited.find(parent.row_id()) == visited.end())
                         {
-                           Logger::DebugN("adding parent {} to queue", parent.label());
+                           MLX_DEBUGN("adding parent {} to queue", parent.label());
                            queue.push_back(parent);
                         }
                      }
@@ -973,7 +974,7 @@ namespace malexandria
                         
                         if (visited.find(child.row_id()) == visited.end())
                         {
-                           Logger::DebugN("adding child {} to queue", child.label());
+                           MLX_DEBUGN("adding child {} to queue", child.label());
                            queue.push_back(child);
                         }
                      }
@@ -984,14 +985,27 @@ namespace malexandria
                ++child_depth;
             }
 
-            if (filename.has_value())
-               Logger::InfoN("exporting to {}", *filename);
+            std::filesystem::path archive_file;
 
-            auto result = Sample::Export(exporting, filename);
+            if (!filename.has_value())
+               archive_file = std::filesystem::path(MainConfig::GetInstance().active_path()) / std::string("export.mlx");
+            else
+               archive_file = *filename;
+            
+            archive_file = archive_file.make_preferred();
+            
+            Logger::InfoN("exporting to {}", archive_file.string());
 
-            Logger::InfoN("samples exported to {}", result.string());
+            auto result = Export(archive_file);
 
-            std::cout << result.string() << std::endl;
+            for (auto &sample : exporting)
+               result.add_sample(sample);
+
+            result.close();
+
+            Logger::InfoN("samples exported to {}", archive_file.string());
+
+            std::cout << archive_file.string() << std::endl;
                            
             return true;
          }
@@ -1278,7 +1292,7 @@ namespace malexandria
                         
                         if (visited.find(parent.row_id()) == visited.end())
                         {
-                           Logger::DebugN("adding parent {} to queue", parent.label());
+                           MLX_DEBUGN("adding parent {} to queue", parent.label());
                            queue.push_back(parent);
                         }
                      }
@@ -1292,7 +1306,7 @@ namespace malexandria
                         
                         if (visited.find(child.row_id()) == visited.end())
                         {
-                           Logger::DebugN("adding child {} to queue", child.label());
+                           MLX_DEBUGN("adding child {} to queue", child.label());
                            queue.push_back(child);
                         }
                      }
@@ -1305,9 +1319,9 @@ namespace malexandria
 
             Logger::InfoN("exporting {} samples", exporting.size());
             std::string temp_name = std::tmpnam(nullptr);
-            Logger::DebugN("exporting samples to {}", temp_name);
+            MLX_DEBUGN("exporting samples to {}", temp_name);
             auto proper_temp_name = Sample::Export(exporting, temp_name);
-            Logger::DebugN("finished exporting samples.");
+            MLX_DEBUGN("finished exporting samples.");
 
             try {
                Logger::InfoN("connecting to {}...", *ssh);
@@ -1318,16 +1332,16 @@ namespace malexandria
                session.authenticate();
 
                Logger::InfoN("successfully connected to remote server.");
-               Logger::DebugN("checking for malexandria...");
+               MLX_DEBUGN("checking for malexandria...");
                
                if (!session.which("malexandria").has_value())
                   throw exception::Exception(fmt::format("Malexandria not installed at {}.", *ssh));
 
-               Logger::DebugN("malexandria installed!");
+               MLX_DEBUGN("malexandria installed!");
                
-               Logger::DebugN("getting tempfile to upload to...");
+               MLX_DEBUGN("getting tempfile to upload to...");
                auto remote_tmp = session.temp_file();
-               Logger::DebugN("got {}", remote_tmp.string());
+               MLX_DEBUGN("got {}", remote_tmp.string());
                
                Logger::InfoN("uploading exported samples in {} to {}:{}...", proper_temp_name.string(), *ssh, remote_tmp.string());
                session.upload(proper_temp_name, remote_tmp);
@@ -1337,9 +1351,9 @@ namespace malexandria
                auto result = session.exec(fmt::format("malexandria sample import -m -P \"{}\" \"{}\"",
                                                       MainConfig::GetInstance().zip_password(),
                                                       remote_tmp.string()));
-               Logger::DebugN("exit code: {}", result.exit_code);
-               Logger::DebugN("stdout: {}", std::string(result.output.begin(), result.output.end()));
-               Logger::DebugN("stderr: {}", std::string(result.error.begin(), result.error.end()));
+               MLX_DEBUGN("exit code: {}", result.exit_code);
+               MLX_DEBUGN("stdout: {}", std::string(result.output.begin(), result.output.end()));
+               MLX_DEBUGN("stderr: {}", std::string(result.error.begin(), result.error.end()));
 
                if (result.exit_code != 0)
                   throw exception::RemoteCommandFailure(fmt::format("malexandria sample import -m -P \"{}\" \"{}\"",
@@ -1349,10 +1363,10 @@ namespace malexandria
                
                Logger::InfoN("imported!");
 
-               Logger::DebugN("removing remote temp file...");
+               MLX_DEBUGN("removing remote temp file...");
                session.remove_file(remote_tmp);
 
-               Logger::DebugN("removing local temp file...");
+               MLX_DEBUGN("removing local temp file...");
                erase_file(proper_temp_name);
             }
             catch (exception::Exception &exc)
@@ -1424,7 +1438,7 @@ namespace malexandria
             if (!session.which("malexandria").has_value())
                throw exception::Exception("Malexandria not found on remote site.");
 
-            Logger::DebugN("building export commandline...");
+            MLX_DEBUGN("building export commandline...");
             
             auto remote_temp = session.temp_file();
             std::string commandline = fmt::format("malexandria sample export --filename \"{}\"", dos_to_unix_path(remote_temp.string()));
@@ -1444,17 +1458,17 @@ namespace malexandria
             for (auto &id : sample_ids)
                commandline = fmt::format("{} {}", commandline, id);
 
-            Logger::DebugN("built commandline: {}", commandline);
+            MLX_DEBUGN("built commandline: {}", commandline);
             Logger::InfoN("exporting samples in remote site...");
             auto result = session.exec(commandline);
-            Logger::DebugN("exit code: {}", result.exit_code);
-            Logger::DebugN("stdout: {}", std::string(result.output.begin(), result.output.end()));
-            Logger::DebugN("stderr: {}", std::string(result.error.begin(), result.error.end()));
+            MLX_DEBUGN("exit code: {}", result.exit_code);
+            MLX_DEBUGN("stdout: {}", std::string(result.output.begin(), result.output.end()));
+            MLX_DEBUGN("stderr: {}", std::string(result.error.begin(), result.error.end()));
 
             if (result.exit_code != 0)
                throw exception::RemoteCommandFailure(commandline, std::string(result.error.begin(), result.error.end()));
 
-            auto export_file = std::string(result.output.begin(), result.output.end());
+            auto export_file = std::string(result.output.begin(), result.output.end()-1);
             std::string local_temp = std::tmpnam(nullptr);
 
             Logger::InfoN("downloading remote export file {} to {}...", export_file, local_temp);

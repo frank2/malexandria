@@ -218,6 +218,14 @@ namespace malexandria
          return *this;
       }
 
+      bool operator==(const Sample &other) const {
+         return this->sha256() == other.sha256();
+      }
+
+      bool operator<(const Sample &other) const {
+         return this->sha256() < other.sha256();
+      }
+
       static std::optional<std::int64_t> IDFromHash(const std::vector<std::uint8_t> &hash);
       static std::optional<std::int64_t> IDFromAlias(const std::string &alias);
       
@@ -298,9 +306,7 @@ namespace malexandria
       std::filesystem::path alias_path() const;
       std::filesystem::path active_file() const;
       std::filesystem::path archive_file() const;
-      std::filesystem::path analysis_file() const;
-      std::filesystem::path analysis_metadata_file() const;
-      std::filesystem::path analysis_path() const;
+      std::string benign_file() const;
 
       Zip archive(int zip_flags) const;
       std::vector<std::uint8_t> extract_to_memory() const;

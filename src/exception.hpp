@@ -633,6 +633,265 @@ namespace exception
    public:
       UnknownSSHEnvironment() : Exception("Unknown SSH environment: failed to detect the remote SSH environment.") {}
    };
+
+   class FileOutsideAnalysisPath : public Exception
+   {
+   public:
+      std::string oob;
+
+      FileOutsideAnalysisPath(const std::string &oob) : oob(oob), Exception() {
+         std::stringstream stream;
+
+         stream << "File outside analysis path: the following file is outside of the analysis path: " << oob;
+
+         this->error = stream.str();
+      }
+   };
+
+   class AnalysisNotSaved : public Exception
+   {
+   public:
+      std::string analysis_id;
+      
+      AnalysisNotSaved(const std::string &analysis_id) : analysis_id(analysis_id), Exception() {
+         std::stringstream stream;
+
+         stream << "Analysis not saved: the analysis repo has not been saved: " << analysis_id;
+
+         this->error = stream.str();
+      }
+   };
+
+   class AnalysisAlreadyCreated : public Exception
+   {
+   public:
+      AnalysisAlreadyCreated() : Exception("Analysis already created: an analysis for the given sample has already been created.") {}
+   };
+
+   class AnalysisNotFound : public Exception
+   {
+   public:
+      AnalysisNotFound() : Exception("Analysis not found: an open analysis was not found within the current directory tree.") {}
+   };
+
+   class NoSamples : public Exception
+   {
+   public:
+      NoSamples() : Exception("No samples: there are no samples within the analysis.") {}
+   };
+
+   class SampleNotFound : public Exception
+   {
+   public:
+      std::string hash;
+
+      SampleNotFound(const std::string &hash) : hash(hash), Exception() {
+         std::stringstream stream;
+
+         stream << "Hash not found: the following hash was not found in the analysis: " << hash;
+
+         this->error = stream.str();
+      }
+   };
+
+   class SampleNotAnalyzed : public Exception
+   {
+   public:
+      std::string sample_id;
+
+      SampleNotAnalyzed(const std::string &sample_id) : sample_id(sample_id), Exception() {
+         std::stringstream stream;
+
+         stream << "Sample not analyzed: the following sample is not currently being analyzed: " << sample_id;
+
+         this->error = stream.str();
+      }
+   };
+
+   class FileExists : public Exception
+   {
+   public:
+      std::string filename;
+
+      FileExists(const std::string &filename) : filename(filename), Exception() {
+         std::stringstream stream;
+
+         stream << "File exists: the following file already exists in the analysis: " << filename;
+
+         this->error = stream.str();
+      }
+   };
+
+   class FileNotAnalyzed : public Exception
+   {
+   public:
+      std::string filename;
+
+      FileNotAnalyzed(const std::string &filename) : filename(filename), Exception() {
+         std::stringstream stream;
+
+         stream << "File not analyzed: the following file is not in the analysis: " << filename;
+
+         this->error = stream.str();
+      }
+   };
+
+   class NoDependencies : public Exception
+   {
+   public:
+      std::string filename;
+
+      NoDependencies(const std::string &filename) : filename(filename), Exception() {
+         std::stringstream stream;
+
+         stream << "No dependencies: the following file does not have any dependencies: " << filename;
+
+         this->error = stream.str();
+      }
+   };
+
+   class InvalidUUID : public Exception
+   {
+   public:
+      std::string id;
+
+      InvalidUUID(const std::string &id) : id(id), Exception() {
+         std::stringstream stream;
+
+         stream << "Invalid UUID: the following string is not a valid uuid: " << id;
+
+         this->error = stream.str();
+      }
+   };
+
+   class NullUUID : public Exception
+   {
+   public:
+      NullUUID() : Exception("Null UUID: the UUID is a nil value.") {}
+   };
+
+   class AnalysisNotOpen : public Exception
+   {
+   public:
+      std::string analysis_id;
+
+      AnalysisNotOpen(const std::string &analysis_id) : analysis_id(analysis_id), Exception() {
+         std::stringstream stream;
+
+         stream << "Analysis not open: the following analysis ID was not in an open state: " << analysis_id;
+
+         this->error = stream.str();
+      }
+   };
+
+   class AnalysisAliasNotFound : public Exception
+   {
+   public:
+      std::string alias;
+
+      AnalysisAliasNotFound(const std::string &alias) : alias(alias), Exception() {
+         std::stringstream stream;
+
+         stream << "Analysis alias not found: the following analysis alias was not found in the database: " << alias;
+
+         this->error = stream.str();
+      }
+   };
+
+   class FileNotLinked : public Exception
+   {
+   public:
+      std::string filename;
+
+      FileNotLinked(const std::string &filename) : filename(filename), Exception() {
+         std::stringstream stream;
+
+         stream << "File not linked: the following file was not configured with an analysis link: " << filename;
+
+         this->error = stream.str();
+      }
+   };
+
+   class AnalysisAliasNotSet : public Exception
+   {
+   public:
+      AnalysisAliasNotSet() : Exception("Analysis alias not set: the analysis does not have an alias set.") {}
+   };
+
+   class CannotSaveAnalysisConfig : public Exception
+   {
+   public:
+      CannotSaveAnalysisConfig() : Exception("Cannot save analysis config: the analysis has neither declare a config file nor is it saved in the database.") {}
+   };
+
+   class AnalysisAliasTaken : public Exception
+   {
+   public:
+      std::string alias;
+      
+      AnalysisAliasTaken(const std::string &alias) : alias(alias), Exception() {
+         std::stringstream stream;
+
+         stream << "Analysis alias taken: the following alias is already taken by another analysis: " << alias;
+
+         this->error = stream.str();
+      }
+   };
+
+   class TaintSampleRemoved : public Exception
+   {
+   public:
+      std::string sample;
+
+      TaintSampleRemoved(const std::string &sample) : sample(sample), Exception() {
+         std::stringstream stream;
+
+         stream << "Taint sample removed: the taint sample for the following hash was removed before it could be saved: " << sample;
+
+         this->error = stream.str();
+      }
+   };
+
+   class TaintFileRename : public Exception
+   {
+   public:
+      TaintFileRename() : Exception("Taint file rename: attempting to rename the taint file is invalid.") {}
+   };
+
+   class NoSourceBuffer : public Exception
+   {
+   public:
+      NoSourceBuffer() : Exception("No source buffer: the zip object does not have a backing source buffer.") {}
+   };
+
+   class SampleNotExported : public Exception
+   {
+   public:
+      std::string sample;
+      
+      SampleNotExported(const std::string &sample) : sample(sample), Exception() {
+         std::stringstream stream;
+
+         stream << "Sample not exported: the following hash was not found in the export archive: " << sample;
+
+         this->error = stream.str();
+      }
+   };
+
+
+   class AnalysisNotExported : public Exception
+   {
+   public:
+      std::string analysis;
+      
+      AnalysisNotExported(const std::string &analysis) : analysis(analysis), Exception() {
+         std::stringstream stream;
+
+         stream << "Analysis not exported: the following analysis id was not found in the export archive: " << analysis;
+
+         this->error = stream.str();
+      }
+   };
 }}
 
 #endif

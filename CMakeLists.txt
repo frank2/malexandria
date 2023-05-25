@@ -78,6 +78,9 @@ set(FMT_INSTALL OFF CACHE BOOL "Do not create an install target for libfmt" FORC
 set(FMT_TEST OFF CACHE BOOL "Do not generate tests for libfmt" FORCE)
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/libfmt)
 
+set(UUID_SYSTEM_GENERATOR ON CACHE BOOL "Use the system UUID generator" FORCE)
+add_subdirectory(${PROJECT_SOURCE_DIR}/lib/stduuid)
+
 set(MALEXANDRIA_VERSION_MAJOR 1)
 set(MALEXANDRIA_VERSION_MINOR 0)
 set(MALEXANDRIA_VERSION_REVISION 0)
@@ -92,9 +95,9 @@ add_executable(malexandria ${HEADER_FILES} ${SRC_FILES})
 set_target_properties(malexandria PROPERTIES LINKER_LANGUAGE CXX)
 
 if (WIN32)
-  target_link_libraries(malexandria PUBLIC argparse cryptopp nlohmann_json ZLIB::ZLIB zip sqlite3 ssh crypt32 fmt-header-only)
+  target_link_libraries(malexandria PUBLIC argparse cryptopp nlohmann_json ZLIB::ZLIB zip sqlite3 ssh crypt32 fmt-header-only stduuid)
 else()
-  target_link_libraries(malexandria PUBLIC argparse cryptopp nlohmann_json ZLIB::ZLIB zip sqlite3 ssh ncurses fmt-header-only)
+  target_link_libraries(malexandria PUBLIC argparse cryptopp nlohmann_json ZLIB::ZLIB zip sqlite3 ssh ncurses fmt-header-only stduuid)
 endif()
 
 target_include_directories(malexandria PUBLIC

@@ -1,5 +1,4 @@
 #include "sample.hpp"
-#include "args/main.hpp"
 
 using namespace malexandria;
 
@@ -261,7 +260,7 @@ std::filesystem::path Sample::Export(const std::vector<Sample> &samples, std::op
    if (filename->extension().string() != ".mlx")
       *filename += std::string(".mlx");
 
-   Logger::DebugN("export filename: {}", filename->string());
+   MLX_DEBUGN("export filename: {}", filename->string());
 
    auto export_archive = Zip(*filename, ZIP_CREATE | ZIP_TRUNCATE);
    export_archive.set_password(main_config.zip_password());
@@ -314,7 +313,7 @@ std::filesystem::path Sample::Export(const std::vector<Sample> &samples, std::op
       export_archive.insert_buffer(sample_data.back(), archive_file);
 
       Logger::Raw(Logger::Level::Info, "done.\n");
-      Logger::DebugN("metadata: {}", export_metadata[hash_string].dump(4));
+      MLX_DEBUGN("metadata: {}", export_metadata[hash_string].dump(4));
    }
 
    Logger::Info("samples processed, establishing relationships...");
@@ -360,7 +359,7 @@ std::vector<Sample> Sample::Import(const std::filesystem::path &file, std::optio
    if (!password.has_value())
       password = main_config.zip_password();
 
-   Logger::DebugN("password: {}", *password);
+   MLX_DEBUGN("password: {}", *password);
    
    auto import_archive = Zip(file.string(), ZIP_RDONLY);
    import_archive.set_password(*password);
@@ -380,7 +379,7 @@ std::vector<Sample> Sample::Import(const std::filesystem::path &file, std::optio
          throw exception::JSONException(exc);
       }
 
-      Logger::DebugN("key: {}", key);
+      MLX_DEBUGN("key: {}", key);
 
       json data;
 
@@ -564,7 +563,7 @@ void Sample::load_file(const std::filesystem::path &path) {
 
    this->_filename = path.filename().string();
 
-   Logger::Debug("calculating sha256 of {} to determine if it exists...", this->_filename);
+   MLX_DEBUG("calculating sha256 of {} to determine if it exists...", this->_filename);
    this->_sha256 = malexandria::sha256(path);
    Logger::Raw(Logger::Level::Debug, "{}\n", to_hex_string(this->_sha256));
    
@@ -572,21 +571,21 @@ void Sample::load_file(const std::filesystem::path &path) {
 
    if (id.has_value())
    {
-      Logger::DebugN("got db id {}, loading it instead.", *id);
+      MLX_DEBUGN("got db id {}, loading it instead.", *id);
       
       this->load_id(*id);
    }
    else
    {
-      Logger::Debug("sample is new. calculating md5...");
+      MLX_DEBUG("sample is new. calculating md5...");
       this->_md5 = malexandria::md5(path);
       Logger::Raw(Logger::Level::Debug, "{}\n", to_hex_string(this->_md5));
       
-      Logger::Debug("calculating sha1...");
+      MLX_DEBUG("calculating sha1...");
       this->_sha1 = malexandria::sha1(path);
       Logger::Raw(Logger::Level::Debug, "{}\n", to_hex_string(this->_sha1));
 
-      Logger::Debug("calculating sha3-384...");
+      MLX_DEBUG("calculating sha3-384...");
       this->_sha3_384 = malexandria::sha3_384(path);
       Logger::Raw(Logger::Level::Debug, "{}\n", to_hex_string(this->_sha3_384));
    }
@@ -595,7 +594,7 @@ void Sample::load_file(const std::filesystem::path &path) {
 }
 
 void Sample::load_data(const std::vector<std::uint8_t> &data) {
-   Logger::Debug("calculating sha256 of data to determine if it exists...");
+   MLX_DEBUG("calculating sha256 of data to determine if it exists...");
    this->_sha256 = malexandria::sha256(data.data(), data.size());
    Logger::Raw(Logger::Level::Debug, "{}\n", to_hex_string(this->_sha256));
    
@@ -603,21 +602,21 @@ void Sample::load_data(const std::vector<std::uint8_t> &data) {
 
    if (id.has_value())
    {
-      Logger::DebugN("got db id {}, loading it instead.", *id);
+      MLX_DEBUGN("got db id {}, loading it instead.", *id);
       
       this->load_id(*id);
    }
    else
    {
-      Logger::Debug("sample is new. calculating md5...");
+      MLX_DEBUG("sample is new. calculating md5...");
       this->_md5 = malexandria::md5(data.data(), data.size());
       Logger::Raw(Logger::Level::Debug, "{}\n", to_hex_string(this->_md5));
       
-      Logger::Debug("calculating sha1...");
+      MLX_DEBUG("calculating sha1...");
       this->_sha1 = malexandria::sha1(data.data(), data.size());
       Logger::Raw(Logger::Level::Debug, "{}\n", to_hex_string(this->_sha1));
 
-      Logger::Debug("calculating sha3-384...");
+      MLX_DEBUG("calculating sha3-384...");
       this->_sha3_384 = malexandria::sha3_384(data.data(), data.size());
       Logger::Raw(Logger::Level::Debug, "{}\n", to_hex_string(this->_sha3_384));
 
@@ -1024,11 +1023,11 @@ void Sample::erase(void) {
    if (path_exists(this->archive_file()))
       erase_file(this->archive_file());
 
-   if (path_exists(this->analysis_file()))
-      erase_file(this->analysis_file());
+   //if (path_exists(this->analysis_file()))
+   //   erase_file(this->analysis_file());
 
-   if (path_exists(this->analysis_metadata_file()))
-      erase_file(this->analysis_metadata_file());
+   //if (path_exists(this->analysis_metadata_file()))
+   //   erase_file(this->analysis_metadata_file());
 
    auto &config = MainConfig::GetInstance();
    clear_directory(config.vault_path(), this->vault_path());
@@ -1256,21 +1255,12 @@ std::filesystem::path Sample::archive_file() const {
    return this->vault_path() / std::string("sample.zip");
 }
 
-std::filesystem::path Sample::analysis_file() const {
-   return this->vault_path() / std::string("analysis.zip");
-}
+std::string Sample::benign_file() const {
+   auto hex = to_hex_string(this->_sha256);
+   hex.push_back('.');
+   hex += MainConfig::GetInstance().benign_extension();
 
-std::filesystem::path Sample::analysis_metadata_file() const {
-   return this->vault_path() / std::string("analysis.json");
-}
-
-std::filesystem::path Sample::analysis_path() const {
-   auto &config = MainConfig::GetInstance();
-   std::filesystem::path path = config.active_path();
-   path /= std::string("analysis");
-   path /= this->label();
-
-   return path;
+   return hex;
 }
 
 Zip Sample::archive(int zip_flags) const {
@@ -1292,7 +1282,8 @@ void Sample::extract_to_disk(std::optional<std::filesystem::path> filename) cons
       filename = this->active_file();
 
    if (!path_exists(filename->parent_path()))
-      std::filesystem::create_directories(filename->parent_path());
+      if (!std::filesystem::create_directories(filename->parent_path()))
+         throw exception::CreateDirectoryFailure(filename->parent_path().string());
 
    this->archive(ZIP_RDONLY).extract_to_disk((std::uint64_t)0, *filename);
 }

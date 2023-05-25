@@ -86,7 +86,7 @@ void SSHKey::allocate(void) {
 SSHKey &SSHKeyPair::public_key(void) {
    if (!this->_pub_key.has_key())
    {
-      Logger::Debug("importing pubkey {}...", this->_pub_key_file.string());
+      MLX_DEBUG("importing pubkey {}...", this->_pub_key_file.string());
       ssh_key key = nullptr;
       auto result = ssh_pki_import_pubkey_file(this->_pub_key_file.string().c_str(), &key);
       Logger::Raw(Logger::Level::Debug, "result = {}.\n", result);
@@ -113,7 +113,7 @@ SSHKey &SSHKeyPair::private_key(void) {
                                                 password_callback,
                                                 nullptr,
                                                 &key);
-      Logger::DebugN("import result={}.", result);
+      MLX_DEBUGN("import result={}.", result);
       
       if (key != nullptr)
          this->_priv_key = key;
@@ -359,13 +359,13 @@ void SSHSession::validate_host(void) {
    std::uint8_t *hash_bytes;
    std::size_t hash_size;
 
-   Logger::Debug("getting ssh server pubkey...");
+   MLX_DEBUG("getting ssh server pubkey...");
    
    if (ssh_get_server_publickey(**this, &server_pubkey) < 0)
       throw exception::SSHException(ssh_get_error(**this));
 
    Logger::Raw(Logger::Level::Debug, "done.\n");
-   Logger::Debug("getting sha1 hash of key...");
+   MLX_DEBUG("getting sha1 hash of key...");
 
    auto result = ssh_get_publickey_hash(server_pubkey, SSH_PUBLICKEY_HASH_SHA1, &hash_bytes, &hash_size);
    ssh_key_free(server_pubkey);
@@ -375,7 +375,7 @@ void SSHSession::validate_host(void) {
 
    Logger::Raw(Logger::Level::Debug, "{}\n", to_hex_string(hash_bytes, hash_size));
 
-   Logger::Debug("checking state of server...");
+   MLX_DEBUG("checking state of server...");
    known_state = ssh_session_is_known_server(**this);
 
    switch(known_state)
@@ -429,7 +429,7 @@ void SSHSession::validate_host(void) {
 
       if (answer == "no")
       {
-         Logger::DebugN("key is not trusted.");
+         MLX_DEBUGN("key is not trusted.");
          ssh_clean_pubkey_hash(&hash_bytes);
          throw exception::SSHHostUnknown();
       }
@@ -452,7 +452,7 @@ void SSHSession::validate_host(void) {
 }
 
 void SSHSession::authenticate_none() {
-   Logger::Debug("attempting no authentication...");
+   MLX_DEBUG("attempting no authentication...");
    auto result = ssh_userauth_none(**this, nullptr);
    Logger::Raw(Logger::Level::Debug, "result={}...", result);
 
@@ -477,7 +477,7 @@ void SSHSession::authenticate_none() {
 }
 
 void SSHSession::authenticate_pubkey() {
-   Logger::Debug("attempting automatic public key authentication...");
+   MLX_DEBUG("attempting automatic public key authentication...");
    auto result = ssh_userauth_publickey_auto(**this, nullptr, nullptr);
    Logger::Raw(Logger::Level::Debug, "result={}...", result);
 
@@ -488,7 +488,7 @@ void SSHSession::authenticate_pubkey() {
    }
 
    Logger::Raw(Logger::Level::Debug, "general failure.\n");
-   Logger::DebugN("attempting to authenticate with local keys...");
+   MLX_DEBUGN("attempting to authenticate with local keys...");
    
    for (auto &keypair : this->_keys)
    {
@@ -498,12 +498,12 @@ void SSHSession::authenticate_pubkey() {
       if (result != SSH_AUTH_SUCCESS)
          continue;
 
-      Logger::DebugN("found a pubkey that authenticates!");
-      Logger::DebugN("loading private key...");
+      MLX_DEBUGN("found a pubkey that authenticates!");
+      MLX_DEBUGN("loading private key...");
       auto &privkey = keypair.private_key();
-      Logger::DebugN("private key loaded.");
+      MLX_DEBUGN("private key loaded.");
 
-      Logger::Debug("attempting authentication with private key...");
+      MLX_DEBUG("attempting authentication with private key...");
       result = ssh_userauth_publickey(**this, nullptr, *privkey);
       Logger::Raw(Logger::Level::Debug, "result={}...", result);
 
@@ -535,7 +535,7 @@ void SSHSession::authenticate_pubkey() {
 }
 
 void SSHSession::authenticate_interactive() {
-   Logger::DebugN("starting keyboard interactive mode.");
+   MLX_DEBUGN("starting keyboard interactive mode.");
    
    auto result = ssh_userauth_kbdint(**this, nullptr, nullptr);
 
@@ -603,20 +603,20 @@ void SSHSession::authenticate_interactive() {
 }
 
 void SSHSession::authenticate_password(void) {
-   Logger::DebugN("performing password-based authentication.");
+   MLX_DEBUGN("performing password-based authentication.");
    
    auto password = password_prompt("Password: ");
 
    if (ssh_userauth_password(**this, nullptr, password.c_str()) == SSH_AUTH_ERROR)
       throw exception::SSHAuthenticationFailure();
 
-   Logger::DebugN("password authentication succeeded.");
+   MLX_DEBUGN("password authentication succeeded.");
 }
 
 void SSHSession::set_host(const std::string &host) {
    this->set_option(SSH_OPTIONS_HOST, host.c_str());
 
-   Logger::DebugN("parsing ssh config");
+   MLX_DEBUGN("parsing ssh config");
    
    if (ssh_options_parse_config(**this, nullptr) < 0)
       throw exception::SSHException(ssh_get_error(**this));
@@ -674,23 +674,23 @@ void SSHSession::disconnect(void) {
 void SSHSession::authenticate(void) {
    try
    {
-      Logger::DebugN("attempting no authentication initially...");
+      MLX_DEBUGN("attempting no authentication initially...");
       this->authenticate_none();
-      Logger::DebugN("success!");
+      MLX_DEBUGN("success!");
       return;
    }
    catch (exception::SSHAuthenticationFailure &exc)
    {
-      Logger::DebugN("failure.");
+      MLX_DEBUGN("failure.");
    }
 
-   Logger::Debug("getting authentication methods...");
+   MLX_DEBUG("getting authentication methods...");
    auto methods = ssh_userauth_list(**this, nullptr);
    Logger::Raw(Logger::Level::Debug, "methods: {:#08x}.\n", methods);
 
    if (methods & SSH_AUTH_METHOD_NONE)
    {
-      Logger::DebugN("methods & SSH_AUTH_METHOD_NONE");
+      MLX_DEBUGN("methods & SSH_AUTH_METHOD_NONE");
       
       try
       {
@@ -706,7 +706,7 @@ void SSHSession::authenticate(void) {
    }
    if (methods & SSH_AUTH_METHOD_PUBLICKEY)
    {
-      Logger::DebugN("methods & SSH_AUTH_METHOD_PUBLICKEY");
+      MLX_DEBUGN("methods & SSH_AUTH_METHOD_PUBLICKEY");
       
       try
       {
@@ -722,7 +722,7 @@ void SSHSession::authenticate(void) {
    }
    if (methods & SSH_AUTH_METHOD_INTERACTIVE)
    {
-      Logger::DebugN("methods & SSH_AUTH_METHOD_INTERACTIVE");
+      MLX_DEBUGN("methods & SSH_AUTH_METHOD_INTERACTIVE");
       
       try
       {
@@ -738,7 +738,7 @@ void SSHSession::authenticate(void) {
    }
    if (methods & SSH_AUTH_METHOD_PASSWORD)
    {
-      Logger::DebugN("methods & SSH_AUTH_METHOD_PASSWORD");
+      MLX_DEBUGN("methods & SSH_AUTH_METHOD_PASSWORD");
       
       try
       {
@@ -940,55 +940,55 @@ std::vector<std::uint8_t> SSHSession::download(const std::filesystem::path &remo
 SSHSession::Environment SSHSession::get_environment(void) {
    if (!this->_env.has_value())
    {
-      Logger::DebugN("performing shell test...");
+      MLX_DEBUGN("performing shell test...");
       auto result = this->exec("which sh"); // shell test
-      Logger::DebugN("exit code {}:\nstdout: {}\nstderr: {}",
+      MLX_DEBUGN("exit code {}:\nstdout: {}\nstderr: {}",
                      result.exit_code,
                      std::string(result.output.begin(), result.output.end()),
                      std::string(result.error.begin(), result.error.end()));
    
       if (result.exit_code == 0 && result.output.size() > 0)
       {
-         Logger::DebugN("remote is shell.");
+         MLX_DEBUGN("remote is shell.");
          this->_env = Environment::Shell;
       }
    }
 
    if (!this->_env.has_value())
    {
-      Logger::DebugN("performing powershell test...");
+      MLX_DEBUGN("performing powershell test...");
       auto result = this->exec("Get-Command powershell"); // powershell test
-      Logger::DebugN("exit code {}:\nstdout: {}\nstderr: {}",
+      MLX_DEBUGN("exit code {}:\nstdout: {}\nstderr: {}",
                      result.exit_code,
                      std::string(result.output.begin(), result.output.end()),
                      std::string(result.error.begin(), result.error.end()));
       
       if (result.exit_code == 0 && result.output.size() > 0)
       {
-         Logger::DebugN("remote is powershell.");
+         MLX_DEBUGN("remote is powershell.");
          this->_env = Environment::PowerShell;
       }
    }
 
    if (!this->_env.has_value())
    {
-      Logger::DebugN("performing cmd test...");
+      MLX_DEBUGN("performing cmd test...");
       auto result = this->exec("where cmd"); // cmd test
-      Logger::DebugN("exit code {}:\nstdout: {}\nstderr: {}",
+      MLX_DEBUGN("exit code {}:\nstdout: {}\nstderr: {}",
                      result.exit_code,
                      std::string(result.output.begin(), result.output.end()),
                      std::string(result.error.begin(), result.error.end()));
 
       if (result.exit_code == 0 && result.output.size() > 0)
       {
-         Logger::DebugN("remote is cmd.");
+         MLX_DEBUGN("remote is cmd.");
          this->_env = Environment::CMD;
       }
    }
 
    if (!this->_env.has_value())
    {
-      Logger::DebugN("remote is unknown.");
+      MLX_DEBUGN("remote is unknown.");
       this->_env = Environment::Unknown;
    }
 

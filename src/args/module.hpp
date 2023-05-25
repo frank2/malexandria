@@ -47,7 +47,7 @@ namespace malexandria
       }
 
       virtual bool execute(Module &root) {
-         Logger::DebugN("executing {} module", this->m_program_name);
+         MLX_DEBUGN("executing {} module", this->m_program_name);
          
          for (auto submodule : this->submodules)
             if (this->is_subcommand_used(submodule->m_program_name))

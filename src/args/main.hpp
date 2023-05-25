@@ -2,7 +2,10 @@
 #define __MALEXANDRIA_ARGS_MAIN_HPP
 
 #include "args/module.hpp"
+#include "args/analysis.hpp"
+#include "args/config.hpp"
 #include "args/sample.hpp"
+#include "args/transport.hpp"
 #include "exception.hpp"
 #include "utility.hpp"
 
@@ -14,8 +17,13 @@ namespace malexandria
    
       MainModule()
          : Module("malexandria",
-                  "A program for organizing and transporting malware samples and analysis.",
-                  {std::make_shared<SampleModule>()},
+                  "A tool for organizing and maintaining a personal database of malware.",
+                  {
+                     std::make_shared<SampleModule>(),
+                     std::make_shared<ConfigModule>(),
+                     std::make_shared<AnalysisModule>(),
+                     std::make_shared<TransportModule>(),
+                  },
                   argparse::default_arguments::all)
       {
          this->add_argument("-l", "--log-level")

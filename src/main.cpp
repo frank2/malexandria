@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
       return 1;
    }
 
-   Logger::DebugN("arguments parsed.");
+   MLX_DEBUGN("arguments parsed.");
 
    //#if defined(MALEXANDRIA_STATIC)
    if (ssh_init() == SSH_ERROR)

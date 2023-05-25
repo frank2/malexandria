@@ -47,6 +47,8 @@ namespace malexandria
       const json &data(void) const { return this->_data; }
       void set_data(const json &data) { this->_data = data; }
 
+      bool has_key(const json &data) const;
+
       void from_file(const std::filesystem::path &filename);
       void parse(const std::string &str);
       void save(const std::filesystem::path &filename) const;
@@ -69,6 +71,9 @@ namespace malexandria
       
       std::string active_path() const;
       void set_active_path(const std::string &path);
+
+      std::string analysis_path() const;
+      void set_analysis_path(const std::string &path);
       
       std::string database() const;
       void set_database(const std::string &path);

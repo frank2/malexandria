@@ -27,6 +27,11 @@ CREATE TABLE mlx_families (\n\
    family TEXT UNIQUE NOT NULL\n\
 );\n\
 \n\
+CREATE TABLE mlx_actors (\n\
+   id INTEGER PRIMARY KEY ASC,\n\
+   actor TEXT UNIQUE NOT NULL\n\
+);\n\
+\n\
 CREATE TABLE mlx_sample_tags (\n\
    sample_id INTEGER NOT NULL,\n\
    tag_id INTEGER NOT NULL,\n\
@@ -41,6 +46,13 @@ CREATE TABLE mlx_sample_families (\n\
    FOREIGN KEY(family_id) REFERENCES mlx_families(id)\n\
 );\n\
 \n\
+CREATE TABLE mlx_sample_actors (\n\
+   sample_id INTEGER NOT NULL,\n\
+   actor_id INTEGER NOT NULL,\n\
+   FOREIGN KEY(sample_id) REFERENCES mlx_samples(id),\n\
+   FOREIGN KEY(actor_id) REFERENCES mlx_actors(id)\n\
+);\n\
+\n\
 CREATE TABLE mlx_sample_relationships (\n\
    parent_id INTEGER NOT NULL,\n\
    child_id INTEGER NOT NULL,\n\
@@ -52,6 +64,29 @@ CREATE TABLE mlx_aliases (\n\
    sample_id INTEGER UNIQUE NOT NULL,\n\
    alias TEXT UNIQUE NOT NULL,\n\
    FOREIGN KEY(sample_id) REFERENCES mlx_samples(id)\n\
+);\n\
+CREATE TABLE mlx_analysis (\n\
+   id INTEGER PRIMARY KEY ASC,\n\
+   analysis_id CHAR(36) UNIQUE NOT NULL\n\
+);\n\
+\n\
+CREATE TABLE mlx_analysis_alias (\n\
+   analysis_id INTEGER UNIQUE NOT NULL,\n\
+   alias TEXT UNIQUE NOT NULL,\n\
+   FOREIGN KEY (analysis_id) REFERENCES mlx_analysis(id)\n\
+);\n\
+\n\
+CREATE TABLE mlx_analysis_opened (\n\
+   analysis_id INTEGER UNIQUE NOT NULL,\n\
+   path TEXT NOT NULL,\n\
+   FOREIGN KEY (analysis_id) REFERENCES mlx_analysis(id)\n\
+);\n\
+\n\
+CREATE TABLE mlx_analysis_samples (\n\
+   analysis_id INTEGER NOT NULL,\n\
+   sample_id INTEGER NOT NULL,\n\
+   FOREIGN KEY (analysis_id) REFERENCES mlx_analysis(id),\n\
+   FOREIGN KEY (sample_id) REFERENCES mlx_samples(id)\n\
 );";
 
    Database::GetInstance().query(tables);

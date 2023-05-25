@@ -98,14 +98,14 @@ namespace malexandria
          Logger::Prefixed(Level::Debug, "$$", fmt::format("{}\n", message), args...);
       }
 
-#define MLX_DEBUGN(msg, ...) Logger::DebugN(fmt::format("[{}] {}", __FUNCTION__, msg), __VA_ARGS__)
+#define MLX_DEBUGN(msg, ...) Logger::DebugN(fmt::format("[{}] {}", __FUNCTION__, msg), ##__VA_ARGS__)
 
       template <typename... Args>
       static void Debug(const std::string &message, Args&&... args) {
          Logger::Prefixed(Level::Debug, "$$", message, args...);
       }
 
-#define MLX_DEBUG(msg, ...) Logger::Debug(fmt::format("[{}] {}", __FUNCTION__, msg), __VA_ARGS__)
+#define MLX_DEBUG(msg, ...) Logger::Debug(fmt::format("[{}] {}", __FUNCTION__, msg), ##__VA_ARGS__)
 
       template <typename... Args>
       static void InfoN(const std::string &message, Args&&... args) {

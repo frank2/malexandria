@@ -594,9 +594,13 @@ namespace malexandria
                throw exception::Exception("Malexandria not found on remote site.");
 
             MLX_DEBUGN("building export commandline...");
+
+            if (!password.has_value())
+               password = MainConfig::GetInstance().zip_password();
             
             auto remote_temp = session.temp_file();
-            std::string commandline = fmt::format("malexandria transport export --filename -", dos_to_unix_path(remote_temp.string()));
+            std::string commandline = fmt::format("malexandria transport export --filename - --password \"{}\"",
+                                                  *password);
 
             if (download_children)
                commandline = fmt::format("{} --children", commandline);
@@ -628,6 +632,7 @@ namespace malexandria
                throw exception::RemoteCommandFailure(commandline, std::string(result.error.begin(), result.error.end()));
 
             auto export_archive = Export(result.output);
+            export_archive.set_password(*password);
 
             Logger::InfoN("disconnecting from ssh site...");
             session.disconnect();

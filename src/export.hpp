@@ -65,7 +65,7 @@ namespace malexandria
       };
 
    private:
-      Config _config;
+      std::optional<Config> _config;
       Zip _archive;
       std::optional<std::filesystem::path> _filename;
 
@@ -85,9 +85,6 @@ namespace malexandria
 
       void open(std::optional<std::vector<std::uint8_t>> zip_data, int flags=ZIP_CREATE) {
          this->_archive.open(zip_data, flags);
-
-         if (zip_data.has_value())
-            this->load_config();
       }
       void open(const std::filesystem::path &filename, int flags=ZIP_CREATE) {
          if (flags & ZIP_CREATE != 0 && !path_exists(filename) && !path_exists(filename.parent_path()))
@@ -96,16 +93,16 @@ namespace malexandria
 
          auto exists = path_exists(filename);
          this->_archive.open(filename, flags);
-
-         if (exists)
-            this->load_config();
       }
+      
       void discard(void) { this->_archive.discard(); }
       void close(void) { this->_archive.close(); }
       std::vector<std::uint8_t> read(void) { return this->_archive.read(); }
       void save(const std::filesystem::path &filename) { this->_archive.save(filename); }
 
       void set_password(const std::string &password) { this->_archive.set_password(password); }
+      bool has_config(void);
+      Config &config(void);
       void load_config(void);
       void save_config(void);
 

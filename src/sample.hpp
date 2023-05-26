@@ -240,9 +240,6 @@ namespace malexandria
       static Sample FromIdentifier(const std::string &string);
       static Sample FromData(const std::vector<std::uint8_t> &vec);
 
-      static std::filesystem::path Export(const std::vector<Sample> &samples, std::optional<std::filesystem::path> filename=std::nullopt);
-      static std::vector<Sample> Import(const std::filesystem::path &file, std::optional<std::string> password=std::nullopt);
-
       bool is_saved(void) const { return this->_row_id.has_value(); }
       std::int64_t row_id(void) const {
          if (!this->is_saved())

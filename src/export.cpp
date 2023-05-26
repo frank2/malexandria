@@ -430,21 +430,37 @@ void Export::Config::remove_analysis(const std::string &id) {
    }
 }
 
+bool Export::has_config(void) {
+   return this->_config.has_value();
+}
+
+Export::Config &Export::config(void) {
+   if (!this->has_config())
+      this->load_config();
+
+   return *this->_config;
+}
+
 void Export::load_config(void) {
-   auto config_data = this->_archive.extract_to_memory("metadata.json");
-   auto config_string = std::string(config_data.begin(), config_data.end());
-   this->_config.parse(config_string);
+   this->_config = Config();
+
+   if (this->_archive.locate("metadata.json") >= 0)
+   {
+      auto config_data = this->_archive.extract_to_memory("metadata.json");
+      auto config_string = std::string(config_data.begin(), config_data.end());
+      this->_config->parse(config_string);
+   }
 }
 
 void Export::save_config(void) {
-   auto config_string = this->_config.to_string();
+   auto config_string = this->config().to_string();
    auto config_data = std::vector<std::uint8_t>(config_string.begin(), config_string.end());
    this->_archive.insert_buffer(config_data, "metadata.json");
 }
 
 std::vector<std::vector<std::uint8_t>> Export::samples(void) {
    std::vector<std::vector<std::uint8_t>> result;
-   auto samples = this->_config.samples();
+   auto samples = this->config().samples();
 
    if (!samples.has_value())
       return result;
@@ -458,19 +474,19 @@ std::vector<std::vector<std::uint8_t>> Export::samples(void) {
 Sample Export::import_sample(const std::vector<std::uint8_t> &hash) {
    auto hash_string = to_hex_string(hash);
 
-   if (!this->_config.has_sample(hash_string))
+   if (!this->config().has_sample(hash_string))
       throw exception::SampleNotExported(hash_string);
 
-   auto export_filename = this->_config.get_export_filename(hash_string);
+   auto export_filename = this->config().get_export_filename(hash_string);
    auto sample = Sample::FromData(this->_archive.extract_to_memory(export_filename));
-   sample.set_filename(this->_config.get_active_filename(hash_string));
+   sample.set_filename(this->config().get_active_filename(hash_string));
 
-   auto alias = this->_config.get_alias(hash_string);
+   auto alias = this->config().get_alias(hash_string);
 
    if (alias.has_value())
       sample.set_alias(*alias);
 
-   auto tags = this->_config.get_tags(hash_string);
+   auto tags = this->config().get_tags(hash_string);
 
    if (tags.has_value())
    {
@@ -480,7 +496,7 @@ Sample Export::import_sample(const std::vector<std::uint8_t> &hash) {
          sample.add_tag(tag);
    }
 
-   auto families = this->_config.get_families(hash_string);
+   auto families = this->config().get_families(hash_string);
 
    if (families.has_value())
    {
@@ -492,7 +508,7 @@ Sample Export::import_sample(const std::vector<std::uint8_t> &hash) {
 
    sample.save();
 
-   auto parents = this->_config.get_parents(hash_string);
+   auto parents = this->config().get_parents(hash_string);
 
    if (parents.has_value())
    {
@@ -501,7 +517,7 @@ Sample Export::import_sample(const std::vector<std::uint8_t> &hash) {
          Sample parent_sample;
          auto parent_hash = from_hex_string(parent);
          
-         if (this->_config.has_sample(parent))
+         if (this->config().has_sample(parent))
             parent_sample = this->import_sample(parent_hash);
          else
             parent_sample = Sample::ByHash(parent_hash);
@@ -510,7 +526,7 @@ Sample Export::import_sample(const std::vector<std::uint8_t> &hash) {
       }
    }
    
-   auto children = this->_config.get_children(hash_string);
+   auto children = this->config().get_children(hash_string);
 
    if (children.has_value())
    {
@@ -519,7 +535,7 @@ Sample Export::import_sample(const std::vector<std::uint8_t> &hash) {
          Sample child_sample;
          auto child_hash = from_hex_string(child);
          
-         if (this->_config.has_sample(child))
+         if (this->config().has_sample(child))
             child_sample = this->import_sample(child_hash);
          else
             child_sample = Sample::ByHash(child_hash);
@@ -546,7 +562,7 @@ void Export::add_sample(const Sample &sample) {
    auto zip_filename = std::filesystem::path("samples") / sample.benign_file();
    zip_filename = std::filesystem::path(dos_to_unix_path(zip_filename.string()));
 
-   this->_config.load_sample(sample);
+   this->config().load_sample(sample);
    this->_archive.create_directories("samples/");
    this->_archive.insert_buffer(sample.extract_to_memory(), zip_filename.string());
 
@@ -559,7 +575,7 @@ void Export::remove_sample(const std::vector<std::uint8_t> &hash) {
    auto zip_filename = std::filesystem::path("samples") / sample.benign_file();
    zip_filename = std::filesystem::path(dos_to_unix_path(zip_filename.string()));
 
-   this->_config.remove_sample(hash_string);
+   this->config().remove_sample(hash_string);
    this->_archive.delete_file(zip_filename.string());
    this->_archive.clear_directories(zip_filename);
 
@@ -568,7 +584,7 @@ void Export::remove_sample(const std::vector<std::uint8_t> &hash) {
 
 std::vector<uuids::uuid> Export::analyses(void) {
    std::vector<uuids::uuid> result;
-   auto analyses = this->_config.analyses();
+   auto analyses = this->config().analyses();
 
    if (!analyses.has_value())
       return result;
@@ -591,7 +607,7 @@ Analysis Export::import_analysis(const uuids::uuid &id) {
 
    MLX_DEBUGN("importing {}...", id_string);
    
-   if (!this->_config.has_analysis(id_string))
+   if (!this->config().has_analysis(id_string))
       throw exception::AnalysisNotExported(id_string);
 
    std::filesystem::path analysis_archive = MainConfig::GetInstance().analysis_path();
@@ -600,7 +616,7 @@ Analysis Export::import_analysis(const uuids::uuid &id) {
 
    MLX_DEBUGN("saving to {}...", analysis_archive.string());
 
-   auto zip_file = this->_config.get_analysis_file(id_string);
+   auto zip_file = this->config().get_analysis_file(id_string);
 
    if (!path_exists(analysis_archive.parent_path()))
       if (!std::filesystem::create_directories(analysis_archive.parent_path()))
@@ -638,7 +654,7 @@ Analysis Export::import_analysis(const uuids::uuid &id) {
       
       Sample sample;
 
-      if (this->_config.has_sample(hash.first))
+      if (this->config().has_sample(hash.first))
       {
          MLX_DEBUGN("sample exists in archive.");
          sample = this->import_sample(hash_bytes);
@@ -659,7 +675,7 @@ Analysis Export::import_analysis(const uuids::uuid &id) {
                   sample.row_id());
    }
 
-   auto alias = this->_config.get_analysis_alias(id_string);
+   auto alias = this->config().get_analysis_alias(id_string);
 
    if (alias.has_value())
    {
@@ -698,7 +714,7 @@ void Export::add_analysis(const Analysis &analysis) {
    for (auto &sample_id : analysis.samples())
       this->add_sample(analysis.get_sample(sample_id));
 
-   this->_config.load_analysis(analysis);
+   this->config().load_analysis(analysis);
 
    auto filename = std::filesystem::path("analyses") / uuids::to_string(analysis.id());
    filename += std::string(".zip");
@@ -713,7 +729,7 @@ void Export::add_analysis(const Analysis &analysis) {
 void Export::remove_analysis(const uuids::uuid &id) {
    auto id_string = uuids::to_string(id);
 
-   if (!this->_config.has_analysis(id_string))
+   if (!this->config().has_analysis(id_string))
       throw exception::AnalysisNotExported(id_string);
 
    auto zip_filename = std::filesystem::path("analyses") / id_string;

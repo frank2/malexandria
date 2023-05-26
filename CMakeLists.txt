@@ -78,6 +78,7 @@ set(FMT_INSTALL OFF CACHE BOOL "Do not create an install target for libfmt" FORC
 set(FMT_TEST OFF CACHE BOOL "Do not generate tests for libfmt" FORCE)
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/libfmt)
 
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/lib/stduuid/cmake")
 set(UUID_SYSTEM_GENERATOR ON CACHE BOOL "Use the system UUID generator" FORCE)
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/stduuid)
 

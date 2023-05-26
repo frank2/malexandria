@@ -531,17 +531,16 @@ namespace malexandria
             : Module("pull",
                      "Pull samples and analyses from remote SSH sources.")
          {
-            this->add_argument("-m", "--malexandria")
-               .help("Download from a remote Malexandria site.")
-               .metavar("SSH_URI");
+            this->add_argument("-p", "--password")
+               .help("The password to use on the export from the SSH server. If none is specified, the default password from the config is used.");
             
             this->add_argument("-c", "--children")
-               .help("Get the children of this sample as well.")
+               .help("Get the children of the given samples as well.")
                .default_value(false)
                .implicit_value(true);
 
-            this->add_argument("-p", "--parents")
-               .help("Get the parents of this sample as well.")
+            this->add_argument("-P", "--parents")
+               .help("Get the parents of the given samples as well.")
                .default_value(false)
                .implicit_value(true);
 
@@ -550,30 +549,40 @@ namespace malexandria
                .default_value(false)
                .implicit_value(true);
 
-            this->add_argument("-a", "--ancestors")
+            this->add_argument("-A", "--ancestors")
                .help("Recursively get parents and all their parents.")
                .default_value(false)
                .implicit_value(true);
+
+            this->add_argument("-s", "--sample")
+               .help("The sample identifiers to pull from the remote repository. Can be specified multiple times.")
+               .metavar("IDENTIFIER")
+               .append();
+
+            this->add_argument("-a", "--analysis")
+               .help("The analysis identifiers to pull from the remote repository. Can be specified multiple times.")
+               .metavar("IDENTIFIER")
+               .append();
             
-            this->add_argument("sample")
-               .help("The sample identifiers to get.")
-               .remaining()
-               .required();
+            this->add_argument("site")
+               .help("The SSH site to pull from.");
          }
 
          virtual bool execute(Module &root) {
+            auto password = this->present("--password");
             auto download_children = this->get<bool>("--children");
             auto download_parents = this->get<bool>("--parents");
             auto download_descendants = this->get<bool>("--descendants");
             auto download_ancestors = this->get<bool>("--ancestors");
-            auto mlx = this->present("--malexandria");
-            auto sample_ids = this->get<std::vector<std::string>>("sample");
+            auto sample_ids = this->present<std::vector<std::string>>("--sample");
+            auto analysis_ids = this->present<std::vector<std::string>>("--analysis");
+            auto ssh = this->get("site");
 
-            if (!mlx.has_value())
-               throw exception::Exception("No Malexandria site given.");
-
-            Logger::InfoN("connecting to mlx site {}...", *mlx);
-            auto session = SSHSession(*mlx);
+            if (!sample_ids.has_value() && !analysis_ids.has_value())
+               throw exception::Exception("Must specify a sample or an analysis to pull.");
+            
+            Logger::InfoN("connecting to mlx site {}...", ssh);
+            auto session = SSHSession(ssh);
             session.connect();
 
             Logger::InfoN("authenticating with site...");
@@ -587,7 +596,7 @@ namespace malexandria
             MLX_DEBUGN("building export commandline...");
             
             auto remote_temp = session.temp_file();
-            std::string commandline = fmt::format("malexandria sample export --filename \"{}\"", dos_to_unix_path(remote_temp.string()));
+            std::string commandline = fmt::format("malexandria transport export --filename -", dos_to_unix_path(remote_temp.string()));
 
             if (download_children)
                commandline = fmt::format("{} --children", commandline);
@@ -601,34 +610,33 @@ namespace malexandria
             if (download_ancestors)
                commandline = fmt::format("{} --ancestors", commandline);
 
-            for (auto &id : sample_ids)
-               commandline = fmt::format("{} {}", commandline, id);
+            if (sample_ids.has_value())
+               for (auto &id : *sample_ids)
+                  commandline = fmt::format("{} --sample \"{}\"", commandline, id);
+
+            if (analysis_ids.has_value())
+               for (auto &analysis : *analysis_ids)
+                  commandline = fmt::format("{} --analysis \"{}\"", commandline, analysis);
 
             MLX_DEBUGN("built commandline: {}", commandline);
             Logger::InfoN("exporting samples in remote site...");
             auto result = session.exec(commandline);
             MLX_DEBUGN("exit code: {}", result.exit_code);
-            MLX_DEBUGN("stdout: {}", std::string(result.output.begin(), result.output.end()));
             MLX_DEBUGN("stderr: {}", std::string(result.error.begin(), result.error.end()));
 
             if (result.exit_code != 0)
                throw exception::RemoteCommandFailure(commandline, std::string(result.error.begin(), result.error.end()));
 
-            auto export_file = std::string(result.output.begin(), result.output.end()-1);
-            std::string local_temp = std::tmpnam(nullptr);
+            auto export_archive = Export(result.output);
 
-            Logger::InfoN("downloading remote export file {} to {}...", export_file, local_temp);
-            session.download(export_file, local_temp);
+            Logger::InfoN("disconnecting from ssh site...");
+            session.disconnect();
 
             Logger::InfoN("importing downloaded samples...");
-            Sample::Import(local_temp); // FIXME account for differently configured passwords on the remote site
-            Logger::InfoN("samples imported!");
+            export_archive.import_samples();
 
-            session.remove_file(export_file);
-            session.remove_file(remote_temp);
-            erase_file(local_temp);
-            
-            session.disconnect();
+            Logger::InfoN("importing downloaded analyses...");
+            export_archive.import_analyses();
 
             return true;
          }

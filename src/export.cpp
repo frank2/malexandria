@@ -574,46 +574,55 @@ Analysis Export::import_analysis(const uuids::uuid &id) {
          throw exception::CreateDirectoryFailure(analysis_archive.parent_path().string());
 
    MLX_DEBUGN("extracting...");
-   
    this->_archive.extract_to_disk(zip_file, analysis_archive);
+
+   auto zip_archive = Zip(analysis_archive, ZIP_RDONLY);
+   auto config_data = zip_archive.extract_to_memory("metadata.json");
+   auto config_string = std::string(config_data.begin(), config_data.end());
+   auto config = Analysis::Config();
+   config.parse(config_string);
 
    auto &db = Database::GetInstance();
    auto has_id = db.query("SELECT id FROM mlx_analysis WHERE analysis_id = ?", id_string);
+   std::int64_t row_id;
 
-   if (has_id.size() == 0)
-      db.query("INSERT INTO mlx_analysis (analysis_id) VALUES (?)", id_string);
-
-   auto analysis = Analysis(id);
-
-   for (auto &hash : analysis.samples())
+   if (has_id.size() != 0)
+      row_id = std::get<std::int64_t>(has_id[0][0]);
+   else
    {
-      auto hash_string = to_hex_string(hash);
-      MLX_DEBUGN("importing {}...", hash_string);
+      db.query("INSERT INTO mlx_analysis (analysis_id) VALUES (?)", id_string);
+      row_id = db.last_insert_rowid();
+   }
+
+   for (auto &hash : config.samples())
+   {
+      auto hash_bytes = from_hex_string(hash.first);
+      MLX_DEBUGN("importing {}...", hash.first);
       
       Sample sample;
 
-      if (this->_config.has_sample(hash_string))
+      if (this->_config.has_sample(hash.first))
       {
          MLX_DEBUGN("sample exists in archive.");
-         sample = this->import_sample(hash);
+         sample = this->import_sample(hash_bytes);
       }
       else
       {
          MLX_DEBUGN("sample does not exist in archive.");
-         sample = Sample::ByHash(hash);
+         sample = Sample::ByHash(hash_bytes);
       }
 
       auto has_sample = db.query("SELECT analysis_id FROM mlx_analysis_samples WHERE analysis_id = ? AND sample_id = ?",
-                                 analysis.row_id(),
+                                 row_id,
                                  sample.row_id());
 
       if (has_sample.size() == 0)
          db.query("INSERT INTO mlx_analysis_samples (analysis_id, sample_id) VALUES (?,?)",
-                  analysis.row_id(),
+                  row_id,
                   sample.row_id());
    }
 
-   return analysis;
+   return Analysis(id);
 }
 
 std::vector<Analysis> Export::import_analyses(void) {

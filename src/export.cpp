@@ -555,6 +555,8 @@ std::vector<uuids::uuid> Export::analyses(void) {
 
 Analysis Export::import_analysis(const uuids::uuid &id) {
    auto id_string = uuids::to_string(id);
+
+   MLX_DEBUGN("importing {}...", id_string);
    
    if (!this->_config.has_analysis(id_string))
       throw exception::AnalysisNotExported(id_string);
@@ -563,11 +565,15 @@ Analysis Export::import_analysis(const uuids::uuid &id) {
    analysis_archive /= hash_fanout(id_string);
    analysis_archive += std::string(".zip");
 
+   MLX_DEBUGN("saving to {}...", analysis_archive.string());
+
    auto zip_file = this->_config.get_analysis_file(id_string);
 
    if (!path_exists(analysis_archive.parent_path()))
       if (!std::filesystem::create_directories(analysis_archive.parent_path()))
          throw exception::CreateDirectoryFailure(analysis_archive.parent_path().string());
+
+   MLX_DEBUGN("extracting...");
    
    this->_archive.extract_to_disk(zip_file, analysis_archive);
 
@@ -582,12 +588,20 @@ Analysis Export::import_analysis(const uuids::uuid &id) {
    for (auto &hash : analysis.samples())
    {
       auto hash_string = to_hex_string(hash);
+      MLX_DEBUGN("importing {}...", hash_string);
+      
       Sample sample;
 
       if (this->_config.has_sample(hash_string))
+      {
+         MLX_DEBUGN("sample exists in archive.");
          sample = this->import_sample(hash);
+      }
       else
+      {
+         MLX_DEBUGN("sample does not exist in archive.");
          sample = Sample::ByHash(hash);
+      }
 
       auto has_sample = db.query("SELECT analysis_id FROM mlx_analysis_samples WHERE analysis_id = ? AND sample_id = ?",
                                  analysis.row_id(),

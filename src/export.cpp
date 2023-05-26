@@ -578,6 +578,19 @@ Analysis Export::import_analysis(const uuids::uuid &id) {
    MLX_DEBUGN("loading {}...", analysis_archive.string());
    auto zip_archive = Zip(analysis_archive, ZIP_RDONLY);
    zip_archive.set_password(MainConfig::GetInstance().zip_password()); // FIXME this is a bug to address
+   MLX_DEBUGN("enumerating file tree...");
+   auto file_tree = zip_archive.file_tree();
+
+   for (auto &entry : file_tree)
+   {
+      MLX_DEBUGN("\t{}:", entry.first);
+
+      for (auto &file : entry.second)
+         MLX_DEBUGN("\t\t{}", file.second);
+
+      MLX_DEBUGN("");
+   }
+   
    MLX_DEBUGN("extracting metadata...");
    auto config_data = zip_archive.extract_to_memory("metadata.json");
    MLX_DEBUGN("parsing config...");

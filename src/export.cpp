@@ -580,6 +580,7 @@ Analysis Export::import_analysis(const uuids::uuid &id) {
    zip_archive.set_password(MainConfig::GetInstance().zip_password()); // FIXME this is a bug to address
    MLX_DEBUGN("extracting metadata...");
    auto config_data = zip_archive.extract_to_memory("metadata.json");
+   MLX_DEBUGN("parsing config...");
    auto config_string = std::string(config_data.begin(), config_data.end());
    auto config = Analysis::Config();
    config.parse(config_string);

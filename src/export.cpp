@@ -576,6 +576,7 @@ Analysis Export::import_analysis(const uuids::uuid &id) {
    MLX_DEBUGN("extracting...");
    this->_archive.extract_to_disk(zip_file, analysis_archive);
 
+   MLX_DEBUGN("loading {}...", analysis_archive.string());
    auto zip_archive = Zip(analysis_archive, ZIP_RDONLY);
    auto config_data = zip_archive.extract_to_memory("metadata.json");
    auto config_string = std::string(config_data.begin(), config_data.end());

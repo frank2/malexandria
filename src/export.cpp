@@ -575,12 +575,10 @@ Analysis Export::import_analysis(const uuids::uuid &id) {
 
    MLX_DEBUGN("extracting...");
    this->_archive.extract_to_disk(zip_file, analysis_archive);
-
-   if (!path_exists(analysis_archive))
-      throw exception::Exception("what the fuck");
-   
    MLX_DEBUGN("loading {}...", analysis_archive.string());
    auto zip_archive = Zip(analysis_archive, ZIP_RDONLY);
+   zip_archive.set_password(MainConfig::GetInstance().zip_password()); // FIXME this is a bug to address
+   MLX_DEBUGN("extracting metadata...");
    auto config_data = zip_archive.extract_to_memory("metadata.json");
    auto config_string = std::string(config_data.begin(), config_data.end());
    auto config = Analysis::Config();

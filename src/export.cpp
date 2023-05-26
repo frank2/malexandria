@@ -578,14 +578,9 @@ Analysis Export::import_analysis(const uuids::uuid &id) {
    MLX_DEBUGN("loading {}...", analysis_archive.string());
    auto zip_archive = Zip(analysis_archive, ZIP_RDONLY);
    zip_archive.set_password(MainConfig::GetInstance().zip_password()); // FIXME this is a bug to address
-   MLX_DEBUGN("enumerating file tree...");
-   auto file_tree = zip_archive.files();
 
-   for (auto &entry : file_tree)
-      MLX_DEBUGN("\t{}", entry.second);
-   
    MLX_DEBUGN("extracting metadata...");
-   auto config_data = zip_archive.extract_to_memory("metadata.json");
+   auto config_data = zip_archive.extract_to_memory(".mlx/metadata.json");
    MLX_DEBUGN("parsing config...");
    auto config_string = std::string(config_data.begin(), config_data.end());
    auto config = Analysis::Config();

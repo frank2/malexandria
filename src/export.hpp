@@ -56,6 +56,11 @@ namespace malexandria
          std::optional<std::vector<std::string>> analyses(void) const;
          void load_analysis(const Analysis &analysis);
          std::string get_analysis_file(const std::string &id) const;
+         void set_analysis_file(const std::string &id, const std::string &filename);
+
+         std::optional<std::string> get_analysis_alias(const std::string &id);
+         void set_analysis_alias(const std::string &id, std::optional<std::string> alias);
+         
          void remove_analysis(const std::string &id);
       };
 

@@ -361,16 +361,16 @@ std::optional<std::vector<std::string>> Export::Config::analyses(void) const {
 }
 
 void Export::Config::load_analysis(const Analysis &analysis) {
-   try {
-      auto id = uuids::to_string(analysis.id());
-      auto filename = std::filesystem::path("analyses") / id;
-      filename += std::string(".zip");
-      auto filename_string = dos_to_unix_path(filename.string());
-      (*this)["analyses"][id] = filename_string;
-   }
-   catch (std::exception &exc) {
-      throw exception::JSONException(exc);
-   }
+   auto id = uuids::to_string(analysis.id());
+   auto filename = std::filesystem::path("analyses") / id;
+   filename += std::string(".zip");
+   auto filename_string = dos_to_unix_path(filename.string());
+   this->set_analysis_file(id, filename_string);
+
+   if (analysis.has_alias())
+      this->set_analysis_alias(id, analysis.alias());
+   else
+      this->set_analysis_alias(id, std::nullopt);
 }
 
 std::string Export::Config::get_analysis_file(const std::string &id) const {
@@ -378,7 +378,40 @@ std::string Export::Config::get_analysis_file(const std::string &id) const {
       throw exception::AnalysisNotExported(id);
 
    try {
-      return (*this)["analyses"][id];
+      return (*this)["analyses"][id]["analysis_file"];
+   }
+   catch (std::exception &exc) {
+      throw exception::JSONException(exc);
+   }
+}
+
+void Export::Config::set_analysis_file(const std::string &id, const std::string &filename) {
+   try {
+      (*this)["analyses"][id]["analysis_file"] = filename;
+   }
+   catch (std::exception &exc) {
+      throw exception::JSONException(exc);
+   }
+}
+
+std::optional<std::string> Export::Config::get_analysis_alias(const std::string &id) {
+   if (!this->has_analysis(id))
+      throw exception::AnalysisNotExported(id);
+
+   try {
+      return (*this)["analyses"][id]["analysis_alias"];
+   }
+   catch (std::exception &exc) {
+      throw exception::JSONException(exc);
+   }
+}
+
+void Export::Config::set_analysis_alias(const std::string &id, std::optional<std::string> alias) {
+   try {
+      if (alias.has_value())
+         (*this)["analyses"][id]["analysis_alias"] = *alias;
+      else
+         (*this)["analyses"][id]["analysis_alias"] = nullptr;
    }
    catch (std::exception &exc) {
       throw exception::JSONException(exc);
@@ -624,6 +657,26 @@ Analysis Export::import_analysis(const uuids::uuid &id) {
          db.query("INSERT INTO mlx_analysis_samples (analysis_id, sample_id) VALUES (?,?)",
                   row_id,
                   sample.row_id());
+   }
+
+   auto alias = this->_config.get_analysis_alias(id_string);
+
+   if (alias.has_value())
+   {
+      auto alias_exists = db.query("SELECT analysis.analysis_id FROM mlx_analysis AS analysis, mlx_analysis_alias AS alias \
+                                   WHERE alias.analysis_id = analysis.id AND alias.alias = ?", *alias);
+
+      if (alias_exists.size() > 0)
+      {
+         if (std::get<std::string>(alias_exists[0][0]) != id_string)
+            throw exception::AnalysisAliasTaken(*alias);
+         else
+            return Analysis(id);
+      }
+
+      db.query("INSERT INTO mlx_analysis_alias (analysis_id, alias) VALUES (?,?)",
+               row_id,
+               *alias);
    }
 
    return Analysis(id);

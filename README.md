@@ -183,13 +183,13 @@ And it's restored to its original state:
 $ cd ~/.malexandria/active/analysis/malicious.agent-tesla
 $ ls -lha
 total 20K
-drwxr-xr-x 3 teal teal 4.0K May 26 23:42 .
-drwxr-xr-x 3 teal teal 4.0K May 26 23:42 ..
-drwxr-xr-x 3 teal teal 4.0K May 26 23:42 .mlx
--rw-r--r-- 1 teal teal 1.0K May 26 23:42 artifact.bin
--rw-r--r-- 1 teal teal    0 May 26 23:42 notes.org
-lrwxrwxrwx 1 teal teal   81 May 26 23:42 tesla.exe -> .mlx/samples/c13d10d9eb5505c91c1982dd55019f8d5e5121952be774dc80eff344453c50ea.000
--rw-r--r-- 1 teal teal    0 May 26 23:42 unpack.py
+drwxr-xr-x 3 frank2 frank2 4.0K May 26 23:42 .
+drwxr-xr-x 3 frank2 frank2 4.0K May 26 23:42 ..
+drwxr-xr-x 3 frank2 frank2 4.0K May 26 23:42 .mlx
+-rw-r--r-- 1 frank2 frank2 1.0K May 26 23:42 artifact.bin
+-rw-r--r-- 1 frank2 frank2    0 May 26 23:42 notes.org
+lrwxrwxrwx 1 frank2 frank2   81 May 26 23:42 tesla.exe -> .mlx/samples/c13d10d9eb5505c91c1982dd55019f8d5e5121952be774dc80eff344453c50ea.000
+-rw-r--r-- 1 frank2 frank2    0 May 26 23:42 unpack.py
 ```
 
 As well as the sample information:

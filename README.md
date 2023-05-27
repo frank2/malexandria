@@ -28,8 +28,8 @@ your target platform. Currently, Windows 10 and above and Linux are supported. I
 on, so if you care enough to try to build for Apple systems, go right ahead!
 
 Compilers are another thing too. You will need a copy of GCC, Clang or [Microsoft Visual Studio](https://visualstudio.microsoft.com)
-to compile this. The minimum C++ standard this project uses is **C++17**, so this project has been tested against Visual Studio 2019
-and GCC 12. Clang hasn't been tested but should hopefully work fine.
+to compile this. The minimum C++ standard this project uses is **C++17**, so this project has been tested against Visual Studio 2019,
+GCC 12 and Clang 13.
 
 On both platforms, OpenSSL needs to be installed. I couldn't work any CMake voodoo with the locally-added libraries to get that to work.
 On Windows, I've built the project with [these binaries](https://slproweb.com/products/Win32OpenSSL.html) (1.1.1t, not 1.1.1t light).

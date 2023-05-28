@@ -1,6 +1,7 @@
 #ifndef __MALEXANDRIA_HASH_HPP
 #define __MALEXANDRIA_HASH_HPP
 
+#include <cerrno>
 #include <cstddef>
 #include <cstdint>
 #include <fstream>

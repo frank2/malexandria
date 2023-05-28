@@ -139,6 +139,8 @@ std::vector<std::uint8_t> malexandria::sha256(const std::filesystem::path &filen
    CryptoPP::SHA256 hash;
    std::vector<std::uint8_t> digest(hash.DigestSize(), 0), buffer(1024 * 1024, 0);
 
+   stream.exceptions(std::ifstream::badbit);
+
    while (stream)
    {
       if (!stream.read(reinterpret_cast<char *>(buffer.data()), buffer.size()))

@@ -15,6 +15,7 @@
 
 #include "exception.hpp"
 #include "fs.hpp"
+#include "logger.hpp"
 
 namespace malexandria
 {

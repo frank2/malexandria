@@ -131,7 +131,7 @@ std::vector<std::uint8_t> malexandria::sha256(const std::vector<std::uint8_t> &v
 std::vector<std::uint8_t> malexandria::sha256(const std::filesystem::path &filename) {
    MLX_DEBUGN("opening file {} for hashing", filename.string());
    MLX_DEBUGN("exists: {}", path_exists(filename));
-   std::basic_ifstream<char> stream(filename.string(), std::ios::binary);
+   std::basic_ifstream<std::uint8_t> stream(filename.string(), std::ios::binary);
 
    if (!stream)
       throw exception::OpenFileFailure(filename.string());
@@ -141,7 +141,7 @@ std::vector<std::uint8_t> malexandria::sha256(const std::filesystem::path &filen
 
    while (stream)
    {
-      if (!stream.read(reinterpret_cast<char *>(buffer.data()), buffer.size()))
+      if (!stream.read(buffer.data(), buffer.size()))
          stream.exceptions(std::ifstream::failbit | std::ifstream::badbit);
       
       auto count = stream.gcount();

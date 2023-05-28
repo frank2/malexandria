@@ -30,7 +30,7 @@ std::uint32_t malexandria::crc32(const std::filesystem::path &filename) {
    CryptoPP::CRC32 hash;
    std::vector<std::uint8_t> digest(hash.DigestSize(), 0), buffer(1024 * 1024, 0);
 
-   while (!stream.eof())
+   while (!stream.eof() && stream.good())
    {
       stream.read(buffer.data(), buffer.size());
       hash.Update(buffer.data(), stream.gcount());
@@ -69,7 +69,7 @@ std::vector<std::uint8_t> malexandria::md5(const std::filesystem::path &filename
    CryptoPP::Weak::MD5 hash;
    std::vector<std::uint8_t> digest(hash.DigestSize(), 0), buffer(1024 * 1024, 0);
 
-   while (!stream.eof())
+   while (!stream.eof() && stream.good())
    {
       stream.read(buffer.data(), buffer.size());
       hash.Update(buffer.data(), stream.gcount());
@@ -103,7 +103,7 @@ std::vector<std::uint8_t> malexandria::sha1(const std::filesystem::path &filenam
    CryptoPP::SHA1 hash;
    std::vector<std::uint8_t> digest(hash.DigestSize(), 0), buffer(1024 * 1024, 0);
 
-   while (!stream.eof())
+   while (!stream.eof() && stream.good())
    {
       stream.read(buffer.data(), buffer.size());
       hash.Update(buffer.data(), stream.gcount());
@@ -137,7 +137,7 @@ std::vector<std::uint8_t> malexandria::sha256(const std::filesystem::path &filen
    CryptoPP::SHA256 hash;
    std::vector<std::uint8_t> digest(hash.DigestSize(), 0), buffer(1024 * 1024, 0);
 
-   while (!stream.eof())
+   while (!stream.eof() && stream.good())
    {
       stream.read(buffer.data(), buffer.size());
       hash.Update(buffer.data(), stream.gcount());
@@ -172,7 +172,7 @@ std::vector<std::uint8_t> malexandria::sha3_384(const std::filesystem::path &fil
    CryptoPP::SHA3_384 hash;
    std::vector<std::uint8_t> digest(hash.DigestSize(), 0), buffer(1024 * 1024, 0);
 
-   while (!stream.eof())
+   while (!stream.eof() && stream.good())
    {
       stream.read(buffer.data(), buffer.size());
       hash.Update(buffer.data(), stream.gcount());

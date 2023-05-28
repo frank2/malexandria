@@ -137,7 +137,7 @@ std::vector<std::uint8_t> malexandria::sha256(const std::filesystem::path &filen
    CryptoPP::SHA256 hash;
    std::vector<std::uint8_t> digest(hash.DigestSize(), 0), buffer(1024 * 1024, 0);
 
-   while (stream.good())
+   while (stream)
    {
       stream.read(buffer.data(), buffer.size());
       hash.Update(buffer.data(), stream.gcount());

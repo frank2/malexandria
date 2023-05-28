@@ -140,7 +140,9 @@ std::vector<std::uint8_t> malexandria::sha256(const std::filesystem::path &filen
    while (stream)
    {
       stream.read(buffer.data(), buffer.size());
-      hash.Update(buffer.data(), stream.gcount());
+      auto count = stream.gcount();
+      MLX_DEBUGN("bytes read: {}", count);
+      hash.Update(buffer.data(), count);
    }
 
    hash.Final(digest.data());

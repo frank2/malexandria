@@ -145,6 +145,8 @@ std::vector<std::uint8_t> malexandria::sha256(const std::filesystem::path &filen
 
    hash.Final(digest.data());
 
+   MLX_DEBUGN("got sha256 hash {}", to_hex_string(digest));
+
    return digest;
 }
 

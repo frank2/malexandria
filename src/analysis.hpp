@@ -53,6 +53,15 @@ namespace malexandria
          void remove_dependency(const std::string &filename, const std::string &id);
       };
 
+      enum class FileState : std::uint8_t
+      {
+         Untracked = 0,
+         New,
+         Clean,
+         Tainted,
+         Deleted
+      };
+        
    private:
       Config _config;
       uuids::uuid _id;
@@ -91,7 +100,26 @@ namespace malexandria
 
       static std::optional<std::filesystem::path> FindAnalysis(std::optional<std::filesystem::path> start=std::nullopt);
       static Analysis FromIdentifier(const std::string &ident);
+      static std::string FileStateToString(FileState file_state) {
+         switch (file_state)
+         {
+         case FileState::Untracked:
+            return "untracked";
 
+         case FileState::New:
+            return "new";
+
+         case FileState::Clean:
+            return "clean";
+
+         case FileState::Tainted:
+            return "tainted";
+
+         case FileState::Deleted:
+            return "deleted";
+         }
+      }
+       
       bool has_config(void) const;
       bool has_id(void) const;
       const uuids::uuid &id(void) const;
@@ -193,6 +221,8 @@ namespace malexandria
       void remove_dependency(const std::filesystem::path &filename, const uuids::uuid &id);
 
       std::string label(void) const;
+      std::map<std::vector<std::uint8_t>,FileState> sample_state(void) const;
+      std::map<std::filesystem::path,FileState> archive_state(void);
 
       std::filesystem::path create(std::optional<std::filesystem::path> root_directory=std::nullopt);
       void save();

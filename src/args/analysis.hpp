@@ -500,6 +500,102 @@ namespace malexandria
          }
       };
 
+      struct StatusFunction : public Module
+      {
+         StatusFunction() : Module("status",
+                                   "Show the status of various files within the analysis repository.")
+         {
+            this->add_argument("-a", "--analysis")
+               .help("The analysis repository to check the file status of.");
+         }
+
+         bool execute(Module &root) {
+            auto analysis = this->present("--analysis");
+            Analysis found_analysis;
+
+            if (analysis.has_value())
+               found_analysis = Analysis::FromIdentifier(*analysis);
+            else
+            {
+               auto config_file = Analysis::FindAnalysis();
+
+               if (!config_file.has_value())
+                  throw exception::AnalysisNotFound();
+
+               found_analysis = Analysis(*config_file);
+            }
+
+            auto sample_state = found_analysis.sample_state();
+            auto archive_state = found_analysis.archive_state();
+
+            std::cout << "sample status:" << std::endl;
+            std::cout << "\t(difference between database sample and analysis sample)" << std::endl << std::endl;
+
+            for (auto &entry : sample_state)
+            {
+               auto &hash = entry.first;
+               auto status = entry.second;
+               auto &sample = found_analysis.get_sample(hash);
+
+               std::cout << "\t\t" << sample.label() << ": " << Analysis::FileStateToString(status) << std::endl;
+            }
+
+            std::cout << std::endl;
+
+            std::map<Analysis::FileState,std::set<std::filesystem::path>> file_state_map;
+
+            for (auto &entry : archive_state)
+            {
+               auto &relative = entry.first;
+               auto status = entry.second;
+
+               file_state_map[status].insert(relative);
+            }
+
+            if (file_state_map.find(Analysis::FileState::Deleted) != file_state_map.end())
+            {
+               std::cout << "deleted files:" << std::endl << std::endl;
+
+               for (auto &deleted : file_state_map[Analysis::FileState::Deleted])
+                  std::cout << "\t" << deleted.string() << std::endl;
+
+               std::cout << std::endl;
+            }
+
+            if (file_state_map.find(Analysis::FileState::Tainted) != file_state_map.end())
+            {
+               std::cout << "modified files:" << std::endl << std::endl;
+
+               for (auto &tainted : file_state_map[Analysis::FileState::Tainted])
+                  std::cout << "\t" << tainted.string() << std::endl;
+
+               std::cout << std::endl;
+            }
+            
+            if (file_state_map.find(Analysis::FileState::New) != file_state_map.end())
+            {
+               std::cout << "new files:" << std::endl << std::endl;
+
+               for (auto &new_file : file_state_map[Analysis::FileState::New])
+                  std::cout << "\t" << new_file.string() << std::endl;
+
+               std::cout << std::endl;
+            }
+
+            if (file_state_map.find(Analysis::FileState::Untracked) != file_state_map.end())
+            {
+               std::cout << "untracked files:" << std::endl << std::endl;
+
+               for (auto &untracked : file_state_map[Analysis::FileState::Untracked])
+                  std::cout << "\t" << untracked.string() << std::endl;
+
+               std::cout << std::endl;
+            }
+
+            return true;
+         }
+      };
+
       AnalysisModule()
          : Module("analysis",
                   "Manage data related to the analysis of a sample.",
@@ -512,7 +608,8 @@ namespace malexandria
                      std::make_shared<EraseFunction>(),
                      std::make_shared<RemoveFunction>(),
                      std::make_shared<RestoreFunction>(),
-                     std::make_shared<RenameFunction>()
+                     std::make_shared<RenameFunction>(),
+                     std::make_shared<StatusFunction>()
                   })
       {}
    };

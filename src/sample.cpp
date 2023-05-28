@@ -254,33 +254,7 @@ void Sample::remove_alias(void) {
    if (!this->is_saved())
       throw exception::SampleNotSaved();
 
-   std::string query = "DELETE FROM mlx_aliases WHERE sample_id=?";
-   sqlite3_stmt *statement;
-   const char *tail;
-   auto &database = Database::GetInstance();
-
-   auto result = sqlite3_prepare_v2(*database,
-                                    query.c_str(),
-                                    query.size(),
-                                    &statement,
-                                    &tail);
-
-   if (result != SQLITE_OK)
-      throw exception::SQLiteException(result, sqlite3_errmsg(*database));
-
-   result = sqlite3_bind_int64(statement, 1, *this->_row_id);
-
-   if (result != SQLITE_OK)
-   {
-      sqlite3_finalize(statement);
-      throw exception::SQLiteException(result, sqlite3_errmsg(*database));
-   }
-
-   result = sqlite3_step(statement);
-   sqlite3_finalize(statement);
-
-   if (result != SQLITE_DONE)
-      throw exception::SQLiteException(result, sqlite3_errmsg(*database));
+   Database::GetInstance().query("DELETE FROM mlx_aliases WHERE sample_id=?", *this->_row_id);
 
    this->_alias = std::nullopt;
 }

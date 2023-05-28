@@ -892,6 +892,20 @@ namespace exception
          this->error = stream.str();
       }
    };
+
+   class NotADirectory : public Exception
+   {
+   public:
+      std::string directory;
+
+      NotADirectory(const std::string &directory) : directory(directory), Exception() {
+         std::stringstream stream;
+
+         stream << "Not a directory: the following file is not a directory: " << directory;
+
+         this->error = stream.str();
+      }
+   };
 }}
 
 #endif

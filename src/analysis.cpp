@@ -1518,6 +1518,105 @@ std::string Analysis::label(void) const {
       return uuids::to_string(this->id());
 }
 
+std::map<std::vector<std::uint8_t>,Analysis::FileState> Analysis::sample_state(void) const  {
+   std::map<std::vector<std::uint8_t>,Analysis::FileState> result;
+   
+   for (auto &entry : this->_samples)
+   {
+      auto &key = entry.first;
+      auto &sample = entry.second;
+
+      auto active_file = this->active_file(sample);
+      auto taint_file = this->taintable_file(sample);
+      auto active_absolute = this->relative_to_disk(active_file);
+      auto taint_absolute = this->relative_to_disk(taint_file);
+
+      if (!path_exists(active_file) && !path_exists(taint_file))
+      {
+         result[key] = Analysis::FileState::Deleted;
+         continue;
+      }
+      else if (path_exists(active_file) && !path_exists(taint_file))
+      {
+         result[key] = Analysis::FileState::New;
+         continue;
+      }
+
+      auto db_sha256 = sample.sha256();
+      auto taint_sha256 = sha256(taint_file);
+
+      if (db_sha256 == taint_sha256)
+         result[key] = Analysis::FileState::Clean;
+      else
+         result[key] = Analysis::FileState::Tainted;
+   }
+
+   return result;
+}
+
+std::map<std::filesystem::path,Analysis::FileState> Analysis::archive_state(void) {
+   std::map<std::filesystem::path,Analysis::FileState> result;
+
+   MLX_DEBUGN("enumerating {}...", this->open_path().string());
+   auto disk_files = list_directory(this->open_path(), true);
+   std::optional<Zip> archive;
+
+   if (this->is_saved())
+      archive = this->archive(ZIP_RDONLY);
+
+   for (auto &disk_file : disk_files) {
+      if (std::filesystem::is_directory(disk_file) || std::filesystem::is_symlink(disk_file))
+         continue;
+      
+      auto relative = this->disk_to_relative(disk_file);
+
+      if (!archive.has_value() || archive->locate(relative.string()) < 0)
+      {
+         if (this->has_file(relative) || this->is_sample(relative) || relative == this->disk_to_relative(this->config_file()))
+            result[relative] = Analysis::FileState::New;
+         else
+            result[relative] = Analysis::FileState::Untracked;
+      }
+      else
+      {
+         auto stat = archive->stat(relative.string());
+         auto archive_crc = stat.crc;
+         auto current_crc = crc32(disk_file);
+
+         if (archive_crc == current_crc)
+            result[relative] = Analysis::FileState::Clean;
+         else
+            result[relative] = Analysis::FileState::Tainted;
+      }
+   }
+
+   std::optional<std::map<std::string,std::vector<Zip::FileEntry>>> file_tree;
+
+   if (archive.has_value())
+      file_tree = archive->file_tree();
+
+   if (file_tree.has_value())
+   {
+      for (auto &entry : *file_tree)
+      {
+         auto &dir = entry.first;
+         auto &entries = entry.second;
+
+         for (auto &zip_entry : entries)
+         {
+            auto zip_absolute = this->relative_to_disk(zip_entry.second);
+
+            MLX_DEBUGN("zip_absolute: {}", zip_absolute.string());
+
+            if (!path_exists(zip_absolute))
+               result[zip_entry.second] = Analysis::FileState::Deleted;
+         }
+      }
+   }
+
+   return result;
+}
+
 std::filesystem::path Analysis::create(std::optional<std::filesystem::path> root_directory) {
    if (this->is_saved() || this->is_open())
       throw exception::AnalysisAlreadyCreated();
@@ -1715,7 +1814,7 @@ void Analysis::save(void) {
 
             throw exception::TaintSampleRemoved(to_hex_string(entry.second.sha256()));
          }
-
+         
          MLX_DEBUGN("saving sample {} to {}...", sample_disk.string(), sample_zip.string());
          archive.insert_file(sample_disk, sample_zip.string());
       }

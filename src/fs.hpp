@@ -23,6 +23,7 @@ namespace malexandria
    bool is_rooted_in(const std::filesystem::path &root, const std::filesystem::path &path);
    std::filesystem::path skip_root(const std::filesystem::path &root, const std::filesystem::path &path);
    std::optional<std::error_code> rename_file(const std::filesystem::path &old_file, const std::filesystem::path &new_file);
+   std::vector<std::filesystem::path> list_directory(const std::filesystem::path &root, bool recurse=false);
 }
 
 #endif

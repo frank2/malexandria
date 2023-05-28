@@ -106,3 +106,36 @@ std::optional<std::error_code> malexandria::rename_file(const std::filesystem::p
    else
       return ec;
 }
+
+std::vector<std::filesystem::path> malexandria::list_directory(const std::filesystem::path &root, bool recurse) {
+   std::vector<std::filesystem::path> result;
+
+   if (!path_exists(root))
+      throw exception::FileNotFound(root.string());
+
+   if (!std::filesystem::is_directory(root))
+      throw exception::NotADirectory(root.string());
+
+   auto target_path = root;
+
+   if (!target_path.has_root_path())
+      target_path = std::filesystem::current_path() / target_path;
+
+   target_path = std::filesystem::path(dos_to_unix_path(target_path.lexically_normal().string()));
+   
+   for (auto &entry : std::filesystem::directory_iterator(target_path))
+   {
+      auto found_path = entry.path();
+      found_path = std::filesystem::path(dos_to_unix_path(found_path.string()));
+            
+      result.push_back(found_path);
+
+      if (entry.is_directory() && recurse)
+      {
+         auto subresult = list_directory(found_path, recurse);
+         result.insert(result.end(), subresult.begin(), subresult.end());
+      }
+   }
+
+   return result;
+}

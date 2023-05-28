@@ -133,7 +133,7 @@ std::vector<std::uint8_t> malexandria::sha256(const std::filesystem::path &filen
    MLX_DEBUGN("exists: {}", path_exists(filename));
    std::basic_ifstream<std::uint8_t> stream(filename.string(), std::ios::binary);
 
-   if (!stream)
+   if (!stream || !stream.is_open())
       throw exception::OpenFileFailure(filename.string());
 
    CryptoPP::SHA256 hash;

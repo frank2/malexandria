@@ -22,7 +22,7 @@ std::uint32_t malexandria::crc32(const std::vector<std::uint8_t> &vec) {
 }
 
 std::uint32_t malexandria::crc32(const std::filesystem::path &filename) {
-   std::basic_ifstream<std::uint8_t> stream(filename.string(), std::ios::binary);
+   std::ifstream stream(filename.string(), std::ios::binary);
 
    if (!stream)
       throw exception::OpenFileFailure(filename.string());
@@ -32,7 +32,7 @@ std::uint32_t malexandria::crc32(const std::filesystem::path &filename) {
 
    while (!stream.eof() && stream.good())
    {
-      stream.read(buffer.data(), buffer.size());
+      stream.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
       hash.Update(buffer.data(), stream.gcount());
    }
 
@@ -61,7 +61,7 @@ std::vector<std::uint8_t> malexandria::md5(const std::vector<std::uint8_t> &vec)
 }
 
 std::vector<std::uint8_t> malexandria::md5(const std::filesystem::path &filename) {
-   std::basic_ifstream<std::uint8_t> stream(filename.string(), std::ios::binary);
+   std::fstream stream(filename.string(), std::ios::binary);
 
    if (!stream)
       throw exception::OpenFileFailure(filename.string());
@@ -71,7 +71,7 @@ std::vector<std::uint8_t> malexandria::md5(const std::filesystem::path &filename
 
    while (!stream.eof() && stream.good())
    {
-      stream.read(buffer.data(), buffer.size());
+      stream.read(reinterpret_cast<char*>(buffer.data()), buffer.size());
       hash.Update(buffer.data(), stream.gcount());
    }
 
@@ -95,7 +95,7 @@ std::vector<std::uint8_t> malexandria::sha1(const std::vector<std::uint8_t> &vec
 }
 
 std::vector<std::uint8_t> malexandria::sha1(const std::filesystem::path &filename) {
-   std::basic_ifstream<std::uint8_t> stream(filename.string(), std::ios::binary);
+   std::ifstream stream(filename.string(), std::ios::binary);
 
    if (!stream)
       throw exception::OpenFileFailure(filename.string());
@@ -105,7 +105,7 @@ std::vector<std::uint8_t> malexandria::sha1(const std::filesystem::path &filenam
 
    while (!stream.eof() && stream.good())
    {
-      stream.read(buffer.data(), buffer.size());
+      stream.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
       hash.Update(buffer.data(), stream.gcount());
    }
 
@@ -164,7 +164,7 @@ std::vector<std::uint8_t> malexandria::sha3_384(const std::vector<std::uint8_t> 
 }
 
 std::vector<std::uint8_t> malexandria::sha3_384(const std::filesystem::path &filename) {
-   std::basic_ifstream<std::uint8_t> stream(filename.string(), std::ios::binary);
+   std::ifstream stream(filename.string(), std::ios::binary);
 
    if (!stream)
       throw exception::OpenFileFailure(filename.string());
@@ -174,7 +174,7 @@ std::vector<std::uint8_t> malexandria::sha3_384(const std::filesystem::path &fil
 
    while (!stream.eof() && stream.good())
    {
-      stream.read(buffer.data(), buffer.size());
+      stream.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
       hash.Update(buffer.data(), stream.gcount());
    }
 

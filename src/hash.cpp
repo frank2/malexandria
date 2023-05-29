@@ -129,11 +129,7 @@ std::vector<std::uint8_t> malexandria::sha256(const std::vector<std::uint8_t> &v
 }
 
 std::vector<std::uint8_t> malexandria::sha256(const std::filesystem::path &filename) {
-   MLX_DEBUGN("opening file {} for hashing", filename.string());
-   MLX_DEBUGN("exists: {}", path_exists(filename));
-   std::ifstream stream;
-
-   stream.open(filename.string(), std::ios::binary);
+   std::ifstream stream(filename.string(), std::ios::binary);
 
    if (!stream)
       throw exception::OpenFileFailure(filename.string());
@@ -141,21 +137,13 @@ std::vector<std::uint8_t> malexandria::sha256(const std::filesystem::path &filen
    CryptoPP::SHA256 hash;
    std::vector<std::uint8_t> digest(hash.DigestSize(), 0), buffer(1024 * 1024, 0);
 
-   while (stream)
+   while (!stream.eof() && stream.good())
    {
       stream.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
-
-      if (stream.fail() && !stream.eof())
-         throw exception::Exception(std::strerror(errno));
-      
-      auto count = stream.gcount();
-      MLX_DEBUGN("bytes read: {}", count);
-      hash.Update(buffer.data(), count);
+      hash.Update(buffer.data(), stream.gcount());
    }
 
    hash.Final(digest.data());
-
-   MLX_DEBUGN("got sha256 hash {}", to_hex_string(digest));
 
    return digest;
 }

@@ -61,7 +61,7 @@ std::vector<std::uint8_t> malexandria::md5(const std::vector<std::uint8_t> &vec)
 }
 
 std::vector<std::uint8_t> malexandria::md5(const std::filesystem::path &filename) {
-   std::fstream stream(filename.string(), std::ios::binary);
+   std::ifstream stream(filename.string(), std::ios::binary);
 
    if (!stream)
       throw exception::OpenFileFailure(filename.string());

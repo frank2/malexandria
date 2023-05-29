@@ -143,7 +143,9 @@ std::vector<std::uint8_t> malexandria::sha256(const std::filesystem::path &filen
 
    while (stream)
    {
-      if (!stream.read(reinterpret_cast<char *>(buffer.data()), buffer.size()))
+      stream.read(reinterpret_cast<char *>(buffer.data()), buffer.size());
+
+      if (stream.fail() && !stream.eof())
          throw exception::Exception(std::strerror(errno));
       
       auto count = stream.gcount();

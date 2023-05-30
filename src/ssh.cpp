@@ -1094,8 +1094,10 @@ std::optional<std::filesystem::path> SSHSession::which(const std::string &progra
 
    case Environment::CMD:
       result = this->exec(fmt::format("where {}", program_name));
+      break;
 
    case Environment::Unknown:
+   default:
       throw exception::UnknownSSHEnvironment();
    }
 

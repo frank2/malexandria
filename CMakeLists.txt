@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.22)
 
 # intercept the install macro so we only install our own targets
 if(NOT DEFINED _DISABLE_INSTALLATION)
@@ -12,6 +12,8 @@ if(NOT DEFINED _DISABLE_INSTALLATION)
 endif()
 
 project(malexandria CXX)
+
+set(CMAKE_POLICY_DEFAULT_CMP0074 NEW)
 
 set(_DISABLE_INSTALLATION True)
 set(CMAKE_CXX_STANDARD 17)
@@ -52,8 +54,9 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/lib/json)
 # trick find_package resolution for libzip
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/zlib)
 add_library(ZLIB::ZLIB ALIAS zlibstatic)
-set(ZLIB_ROOT "${PROJECT_SOURCE_DIR}/lib/zlib")
+set(ZLIB_ROOT "${CMAKE_BINARY_DIR}/lib/zlib")
 set(ZLIB_LIBRARY "local")
+set(ZLIB_INCLUDE_DIR "${CMAKE_BINARY_DIR}/lib/zlib")
 include_directories(${PROJECT_SOURCE_DIR}/lib/zlib)
 include_directories(${CMAKE_BINARY_DIR}/lib/zlib)
 
@@ -64,14 +67,17 @@ set(BUILD_REGRESS OFF CACHE BOOL "Do not build regression tests" FORCE)
 set(BUILD_EXAMPLES OFF CACHE BOOL "Do not build libzip examples" FORCE)
 set(BUILD_DOC OFF CACHE BOOL "Do not build libzip docs" FORCE)
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Do not build shared libs" FORCE)
+cmake_policy(SET CMP0074 NEW)
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/libzip)
 
+cmake_policy(SET CMP0074 NEW)
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/sqlite3-cmake)
 include_directories(${PROJECT_SOURCE_DIR}/lib/sqlite3-cmake/src)
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Do not build shared libs" FORCE)
 set(WITH_EXAMPLES OFF CACHE BOOL "Do not compile the examples." FORCE)
 set(WITH_ZLIB OFF CACHE BOOL "Disable zlib support for ssh." FORCE)
+cmake_policy(SET CMP0074 NEW)
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/libssh)
 
 set(FMT_INSTALL OFF CACHE BOOL "Do not create an install target for libfmt" FORCE)
@@ -81,6 +87,18 @@ add_subdirectory(${PROJECT_SOURCE_DIR}/lib/libfmt)
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/lib/stduuid/cmake")
 set(UUID_SYSTEM_GENERATOR ON CACHE BOOL "Use the system UUID generator" FORCE)
 add_subdirectory(${PROJECT_SOURCE_DIR}/lib/stduuid)
+
+set(HTTP_ONLY ON CACHE BOOL "Disable everything except HTTP in curl" FORCE)
+set(BUILD_CURL_EXE OFF CACHE BOOL "Do not build the curl executable" FORCE)
+set(CURL_ENABLE_EXPORT_TARGET OFF CACHE BOOL "Do not enable export targets for libcurl" FORCE)
+
+if (WIN32)
+  set(CURL_USE_SCHANNEL ON CACHE BOOL "Enable native TLS/SSL on Windows" FORCE)
+else ()
+  set(CURL_USE_OPENSSL ON CACHE BOOL "Enable OpenSSL on Unix platforms" FORCE)
+endif()
+
+add_subdirectory(${PROJECT_SOURCE_DIR}/lib/curl)
 
 set(MALEXANDRIA_VERSION_MAJOR 1)
 set(MALEXANDRIA_VERSION_MINOR 0)
@@ -96,9 +114,9 @@ add_executable(malexandria ${HEADER_FILES} ${SRC_FILES})
 set_target_properties(malexandria PROPERTIES LINKER_LANGUAGE CXX)
 
 if (WIN32)
-  target_link_libraries(malexandria PUBLIC argparse cryptopp nlohmann_json ZLIB::ZLIB zip sqlite3 ssh crypt32 fmt-header-only stduuid)
+  target_link_libraries(malexandria PUBLIC argparse cryptopp nlohmann_json ZLIB::ZLIB zip sqlite3 ssh crypt32 fmt-header-only stduuid libcurl)
 else()
-  target_link_libraries(malexandria PUBLIC argparse cryptopp nlohmann_json ZLIB::ZLIB zip sqlite3 ssh ncurses fmt-header-only stduuid)
+  target_link_libraries(malexandria PUBLIC argparse cryptopp nlohmann_json ZLIB::ZLIB zip sqlite3 ssh ncurses fmt-header-only stduuid libcurl)
 endif()
 
 target_include_directories(malexandria PUBLIC

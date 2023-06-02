@@ -29,3 +29,6 @@
 [submodule "lib/stduuid"]
 	path = lib/stduuid
 	url = https://github.com/mariusbancila/stduuid
+[submodule "lib/curl"]
+	path = lib/curl
+	url = https://github.com/curl/curl.git

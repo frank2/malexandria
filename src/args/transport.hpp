@@ -9,6 +9,7 @@
 
 #include "args/module.hpp"
 #include "export.hpp"
+#include "http.hpp"
 #include "logger.hpp"
 #include "../sample.hpp"
 #include "ssh.hpp"
@@ -647,6 +648,52 @@ namespace malexandria
          }
       };
 
+      struct DownloadFunction : public Module
+      {
+         DownloadFunction()
+            : Module("download",
+                     "Download samples from various sources.")
+         {
+            this->add_argument("-m", "--malware-bazaar")
+               .help("The SHA256 hash to download from Malware Bazaar")
+               .metavar("SHA256")
+               .required();
+         }
+
+         virtual bool execute(Module &root) {
+            auto sample = this->get("--malware-bazaar");
+
+            HTTPRequest request("https://mb-api.abuse.ch/api/v1");
+            request.set_post_data(fmt::format("query=get_file&sha256_hash={}", sample));
+
+            auto result = request.perform();
+
+            if (result != CURLE_OK)
+               throw exception::Exception(fmt::format("CURL error: {}", curl_easy_strerror(result)));
+
+            auto headers = request.received_headers_map();
+
+            if (headers.find("Content-Type") != headers.end() && headers["Content-Type"] != "application/zip")
+               throw exception::Exception(fmt::format("Hash not found on Malware Bazaar: {}", sample));
+
+            auto archive = Zip(request.get_data(), ZIP_RDONLY);
+            archive.set_password("infected");
+
+            Sample sample_obj;
+
+            sample_obj.load_data(archive.extract_to_memory(static_cast<std::uint64_t>(0)));
+            sample_obj.set_filename(archive.get_name(static_cast<std::uint64_t>(0)));
+
+            if (!sample_obj.is_saved())
+            {
+               sample_obj.save();
+               std::cout << sample_obj.label() << std::endl;
+            }
+
+            return true;
+         }
+      };
+
       TransportModule()
          : Module("transport",
                   "Download, upload, import and export samples and analyses in various ways.",
@@ -654,7 +701,8 @@ namespace malexandria
                      std::make_shared<ExportFunction>(),
                      std::make_shared<ImportFunction>(),
                      std::make_shared<PushFunction>(),
-                     std::make_shared<PullFunction>()
+                     std::make_shared<PullFunction>(),
+                     std::make_shared<DownloadFunction>()
                   })
       {}
    };

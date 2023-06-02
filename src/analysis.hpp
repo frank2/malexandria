@@ -117,6 +117,9 @@ namespace malexandria
 
          case FileState::Deleted:
             return "deleted";
+
+         default:
+            return "unknown";
          }
       }
        

@@ -906,6 +906,24 @@ namespace exception
          this->error = stream.str();
       }
    };
+
+   class HTTPDataNotReceived : public Exception
+   {
+   public:
+      HTTPDataNotReceived() : Exception("HTTP data not received: the HTTP request did not get a request body.") {}
+   };
+
+   class NoPUTData : public Exception
+   {
+   public:
+      NoPUTData() : Exception("No PUT data: the request object does not have any PUT data.") {}
+   };
+
+   class NoPOSTData : public Exception
+   {
+   public:
+      NoPOSTData() : Exception("No POST data: the request object does not have any POST data.") {}
+   };
 }}
 
 #endif

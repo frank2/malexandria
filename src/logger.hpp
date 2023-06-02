@@ -62,7 +62,7 @@ namespace malexandria
       static Level LevelFromString(const std::string &level) {
          auto level_copy = level;
          std::transform(level_copy.begin(), level_copy.end(), level_copy.begin(),
-                        [](unsigned char c) { return std::tolower(c); });
+                        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 
          if (level_copy == "silent")
             return Level::Silent;

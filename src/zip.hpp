@@ -30,6 +30,8 @@ namespace malexandria
       std::shared_ptr<zip_t *> _zip;
       std::optional<std::string> _password;
       std::shared_ptr<zip_source_t> _source;
+      /* I really wish libzip copied strings... */
+      std::vector<std::shared_ptr<std::string>> _inserted_strings;
 
       std::shared_ptr<zip_file_t> open(FileID id);
 
@@ -39,7 +41,12 @@ namespace malexandria
       Zip() {}
       Zip(std::optional<std::vector<std::uint8_t>> data, int flags=ZIP_CREATE) { this->open(data, flags); }
       Zip(const std::filesystem::path &path, int flags=ZIP_CREATE) { this->open(path, flags); }
-      Zip(const Zip &other) : _zip(other._zip), _password(other._password), _source(other._source) {}
+      Zip(const Zip &other)
+         : _zip(other._zip),
+           _password(other._password),
+           _source(other._source),
+           _inserted_strings(other._inserted_strings)
+      {}
       ~Zip() {
          if (this->_zip != nullptr && *this->_zip != nullptr && this->_zip.use_count() == 1) { this->discard(); }
       }
@@ -49,6 +56,7 @@ namespace malexandria
          this->_zip = other._zip;
          this->_password = other._password;
          this->_source = other._source;
+         this->_inserted_strings = other._inserted_strings;
 
          return *this;
       }

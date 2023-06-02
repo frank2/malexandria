@@ -285,12 +285,21 @@ std::int64_t Zip::insert_file(const std::filesystem::path &filename, const std::
 {
    if (!path_exists(filename))
       throw exception::FileNotFound(filename.string());
+
+   this->_inserted_strings.push_back(std::make_shared<std::string>(filename.string()));
+   auto disk_filename = this->_inserted_strings.back();
    
-   auto file_source = zip_source_file(**this, filename.string().c_str(), 0, 0);
+   auto file_source = zip_source_file(**this, disk_filename->c_str(), 0, 0);
 
    if (file_source == nullptr)
+   {
+      this->_inserted_strings.pop_back();
       throw exception::ZipException(zip_get_error(**this));
+   }
 
+   this->_inserted_strings.push_back(std::make_shared<std::string>(zip_filename));
+   auto zip_filename_ptr = this->_inserted_strings.back();
+   
    std::int64_t file_index = this->locate(zip_filename);
    std::int64_t add_status;
 
@@ -302,6 +311,10 @@ std::int64_t Zip::insert_file(const std::filesystem::path &filename, const std::
       if (crc == stat.crc)
       {
          MLX_DEBUGN("file crc unchanged, skipping replacement.");
+         zip_source_free(file_source);
+         this->_inserted_strings.pop_back();
+         this->_inserted_strings.pop_back();
+         
          return file_index;
       }
       
@@ -309,15 +322,23 @@ std::int64_t Zip::insert_file(const std::filesystem::path &filename, const std::
    }
    else
    {
-      add_status = zip_file_add(**this, zip_filename.c_str(), file_source, ZIP_FL_ENC_UTF_8);
+      add_status = zip_file_add(**this, zip_filename_ptr->c_str(), file_source, ZIP_FL_ENC_UTF_8);
       file_index = add_status;
    }
 
    if (add_status == -1)
+   {
+      this->_inserted_strings.pop_back();
+      this->_inserted_strings.pop_back();
       throw exception::ZipException(zip_get_error(**this));
+   }
 
    if (this->_password.has_value() && zip_file_set_encryption(**this, file_index, ZIP_EM_AES_256, this->_password->c_str()) != 0)
+   {
+      this->_inserted_strings.pop_back();
+      this->_inserted_strings.pop_back();
       throw exception::ZipException(zip_get_error(**this));
+   }
 
    return file_index;
 }

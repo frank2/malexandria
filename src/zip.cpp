@@ -83,7 +83,7 @@ void Zip::open(const std::filesystem::path &path, int flags) {
    auto filename = path;
    filename = filename.make_preferred();
 
-   this->_inserted_strings.push_back(std::make_shared<std::string>(filename.string()));
+   this->_inserted_strings.push_back(std::make_shared<std::string>(filename.string().c_str()));
    auto filename_ptr = this->_inserted_strings.back();
    auto zip_struct = zip_open(filename_ptr->c_str(), flags, &zip_error);
 
@@ -186,8 +186,7 @@ std::map<std::string,std::vector<Zip::FileEntry>> Zip::file_tree(void) {
    for (auto &entry : files)
    {
       auto name = entry.second;
-      auto path = std::filesystem::path("/");
-      path += std::filesystem::path(name);
+      auto path = std::filesystem::path(std::string("/") + name);
       auto parent_path = path.parent_path();
 
       if (name.back() != '/')

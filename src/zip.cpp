@@ -82,7 +82,10 @@ void Zip::open(const std::filesystem::path &path, int flags) {
    int zip_error = ZIP_ER_OK;
    auto filename = path;
    filename = filename.make_preferred();
-   auto zip_struct = zip_open(filename.string().c_str(), flags, &zip_error);
+
+   this->_inserted_strings.push_back(std::make_shared<std::string>(filename.string()));
+   auto filename_ptr = this->_inserted_strings.back();
+   auto zip_struct = zip_open(filename_ptr->c_str(), flags, &zip_error);
 
    if (zip_error != ZIP_ER_OK)
       throw exception::ZipException(zip_error);

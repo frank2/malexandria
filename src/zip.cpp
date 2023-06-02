@@ -410,13 +410,21 @@ std::int64_t Zip::insert_buffer(const std::uint8_t *ptr, std::size_t size, const
    if (zip_source_commit_write(source) != 0)
       throw exception::ZipException(zip_source_error(source));
 
-   auto index = zip_file_add(**this, filename.c_str(), source, ZIP_FL_OVERWRITE);
+   this->_inserted_strings.push_back(std::make_shared<std::string>(filename));
+   auto filename_ptr = this->_inserted_strings.back();
+   auto index = zip_file_add(**this, filename_ptr->c_str(), source, ZIP_FL_OVERWRITE);
    
    if (index == -1)
+   {
+      this->_inserted_strings.pop_back();
       throw exception::ZipException(zip_get_error(**this));
+   }
 
    if (this->_password.has_value() && zip_file_set_encryption(**this, index, ZIP_EM_AES_256, this->_password->c_str()) == -1)
+   {
+      this->_inserted_strings.pop_back();
       throw exception::ZipException(zip_get_error(**this));
+   }
 
    return index;
 }

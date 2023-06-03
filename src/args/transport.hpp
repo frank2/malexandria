@@ -663,32 +663,56 @@ namespace malexandria
          virtual bool execute(Module &root) {
             auto sample = this->get("--malware-bazaar");
 
-            HTTPRequest request("https://mb-api.abuse.ch/api/v1");
-            request.set_post_data(fmt::format("query=get_file&sha256_hash={}", sample));
+            HTTPRequest sample_request("https://mb-api.abuse.ch/api/v1");
+            sample_request.set_post_data(fmt::format("query=get_file&sha256_hash={}", sample));
 
-            auto result = request.perform();
+            auto result = sample_request.perform();
 
             if (result != CURLE_OK)
                throw exception::Exception(fmt::format("CURL error: {}", curl_easy_strerror(result)));
 
-            auto headers = request.received_headers_map();
+            auto headers = sample_request.received_headers_map();
 
             if (headers.find("Content-Type") != headers.end() && headers["Content-Type"] != "application/zip")
                throw exception::Exception(fmt::format("Hash not found on Malware Bazaar: {}", sample));
 
-            auto archive = Zip(request.get_data(), ZIP_RDONLY);
+            auto archive = Zip(sample_request.get_data(), ZIP_RDONLY);
             archive.set_password("infected");
 
             Sample sample_obj;
-
             sample_obj.load_data(archive.extract_to_memory(static_cast<std::uint64_t>(0)));
-            sample_obj.set_filename(archive.get_name(static_cast<std::uint64_t>(0)));
 
+            HTTPRequest metadata_request("https://mb-api.abuse.ch/api/v1");
+            metadata_request.set_post_data(fmt::format("query=get_info&hash={}", sample));
+
+            result = metadata_request.perform();
+
+            if (result != CURLE_OK)
+               throw exception::Exception(fmt::format("CURL error: {}", curl_easy_strerror(result)));
+
+            headers = metadata_request.received_headers_map();
+
+            if (headers.find("Content-Type") != headers.end() && headers["Content-Type"] != "application/json")
+               throw exception::Exception("Malware Bazaar API error");
+
+            if (!metadata_request.has_data())
+               throw exception::Exception("No metadata to parse");
+
+            auto &data = metadata_request.get_data();
+            std::string json_string(data.begin(), data.end());
+
+            json json_data = json::parse(json_string);
+
+            if (json_data["query_status"] != std::string("ok"))
+               throw exception::Exception(fmt::format("Malware Bazaar bad query: {}", json_data["query_status"]));
+
+            MLX_DEBUGN("got filename: {}", json_data["data"][0]["file_name"].get<std::string>());
+            sample_obj.set_filename(json_data["data"][0]["file_name"]);
+            
             if (!sample_obj.is_saved())
-            {
                sample_obj.save();
-               std::cout << sample_obj.label() << std::endl;
-            }
+
+            std::cout << sample_obj.label() << std::endl;
 
             return true;
          }

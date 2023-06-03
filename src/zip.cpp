@@ -186,7 +186,7 @@ std::map<std::string,std::vector<Zip::FileEntry>> Zip::file_tree(void) {
    for (auto &entry : files)
    {
       auto name = entry.second;
-      auto path = std::filesystem::path(std::string("/"));
+      auto path = std::filesystem::path("/");
       path += name;
       auto parent_path = path.parent_path();
 

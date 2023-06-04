@@ -296,15 +296,21 @@ namespace malexandria
 
                Export mlx;
 
+               MLX_DEBUGN("loading export archive...");
+
                if (archive_data.has_value())
                   mlx = Export(*archive_data, ZIP_RDONLY);
                else
                   mlx = Export(*archive_file, ZIP_RDONLY);
 
+               MLX_DEBUGN("done.");
+
                mlx.set_password(*password);
                
                if (!ignore)
                {
+                  MLX_DEBUGN("importing everything from archive");
+                  
                   for (auto &analysis : mlx.import_analyses())
                      std::cout << analysis.label() << std::endl;
                   
@@ -313,6 +319,8 @@ namespace malexandria
                }
                else
                {
+                  MLX_DEBUGN("skipping known samples and analyses...");
+                  
                   for (auto &analysis : mlx.analyses())
                   {
                      if (Database::GetInstance().query("SELECT id FROM mlx_analysis WHERE analysis_id = ?",

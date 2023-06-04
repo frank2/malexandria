@@ -654,7 +654,7 @@ void Analysis::load_from_uuid(const uuids::uuid &id) {
          this->_open_config = config_file;
    }
 
-   this->load_config();
+   this->load_config(!this->is_open());
 }
 
 void Analysis::load_from_alias(const std::string &alias) {

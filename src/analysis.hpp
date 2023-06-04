@@ -160,8 +160,8 @@ namespace malexandria
       void load_from_uuid(const uuids::uuid &id);
       void load_from_alias(const std::string &alias);
       void load_from_config(const std::filesystem::path &filename);
-      void load_config();
-      void save_config();
+      void load_config(bool archive=false);
+      void save_config(bool archive=false);
 
       bool is_tainted(const Sample &sample) const;
       bool is_tainted(const std::filesystem::path &filename);
@@ -230,7 +230,7 @@ namespace malexandria
       std::filesystem::path create(std::optional<std::filesystem::path> root_directory=std::nullopt);
       void save();
       void close();
-      std::filesystem::path open(std::optional<std::filesystem::path> open_path=std::nullopt);
+      std::filesystem::path open(bool overwrite=false, std::optional<std::filesystem::path> open_path=std::nullopt);
       void erase();
    };
 }

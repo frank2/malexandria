@@ -696,20 +696,21 @@ void Analysis::load_from_config(const std::filesystem::path &filename)
    this->load_config();
 }
 
-void Analysis::load_config(void) {
-   if (this->is_open())
+void Analysis::load_config(bool archive) {
+   if (!archive)
    {
       this->_config = Analysis::Config(this->config_file());
    }
-   else if (this->is_saved())
+   else
    {
+      if (!this->is_saved())
+         throw exception::AnalysisNotSaved(uuids::to_string(this->id()));
+      
       auto &archive = this->archive(ZIP_RDONLY);
       auto config_data = archive.extract_to_memory(std::string(".mlx/metadata.json"));
       this->_config.parse(std::string(config_data.begin(), config_data.end()));
       this->discard_archive();
    }
-   else
-      return;
 
    this->_alias = this->_config.analysis_alias();
    this->_samples.clear();
@@ -721,8 +722,8 @@ void Analysis::load_config(void) {
    }
 }
 
-void Analysis::save_config(void) {
-   if (this->_open_config.has_value())
+void Analysis::save_config(bool archive) {
+   if (!archive)
    {
       auto config_file = this->config_file();
 
@@ -2031,7 +2032,7 @@ void Analysis::close(void) {
    MLX_DEBUGN("analysis {} closed.", this->label());
 }
 
-std::filesystem::path Analysis::open(std::optional<std::filesystem::path> open_path) {
+std::filesystem::path Analysis::open(bool overwrite, std::optional<std::filesystem::path> open_path) {
    if (!this->is_saved())
       throw exception::AnalysisNotSaved(uuids::to_string(this->id()));
 
@@ -2042,6 +2043,7 @@ std::filesystem::path Analysis::open(std::optional<std::filesystem::path> open_p
       if (!std::filesystem::create_directories(*open_path))
          throw exception::CreateDirectoryFailure(open_path->string());
 
+   this->load_config(true);
    this->_open_config = *open_path / std::string(".mlx/metadata.json");
 
    MLX_DEBUGN("saving config to disk...");
@@ -2049,6 +2051,9 @@ std::filesystem::path Analysis::open(std::optional<std::filesystem::path> open_p
 
    for (auto &file : this->files())
    {
+      if (path_exists(this->relative_to_disk(file)) && !overwrite)
+         continue;
+      
       MLX_DEBUGN("extracting {}...", file.string());
       this->extract_file(file, std::nullopt);
    }
@@ -2065,14 +2070,34 @@ std::filesystem::path Analysis::open(std::optional<std::filesystem::path> open_p
       auto &sample = entry.second;
 
       MLX_DEBUGN("extracting and linking {}...", sample.label());
-      this->extract_taintable_sample(sample, std::nullopt);
+
+      if (!path_exists(this->taintable_file(sample)) || overwrite)
+         this->extract_taintable_sample(sample, std::nullopt);
+      
       this->link_sample(sample);
    }
 
-   MLX_DEBUGN("marking {} as opened...", this->label());
-   Database::GetInstance().query("INSERT INTO mlx_analysis_opened (analysis_id, path) VALUES (?,?)",
-                                 *this->_row_id,
-                                 this->open_path().string());
+   auto &db = Database::GetInstance();
+   auto open_query = db.query("SELECT opened.path FROM mlx_analysis_opened AS opened, mlx_analysis AS analysis \
+                               WHERE opened.analysis_id = analysis.id AND analysis.analysis_id=?",
+                              uuids::to_string(this->id()));
+
+   if (open_query.size() == 0)
+   {
+      MLX_DEBUGN("marking {} as opened...", this->label());
+      db.query("INSERT INTO mlx_analysis_opened (analysis_id, path) VALUES (?,?)",
+               *this->_row_id,
+               this->open_path().string());
+   }
+   else
+   {
+      auto open_path = std::filesystem::path(std::get<std::string>(open_query[0][0]));
+
+      if (open_path != this->open_path())
+         db.query("UPDATE mlx_analysis_open SET path=? WHERE analysis_id=?",
+                  this->open_path().string(),
+                  *this->_row_id);
+   }
    
    MLX_DEBUGN("analysis {} opened.", this->label());
    

@@ -507,11 +507,9 @@ namespace malexandria
             MLX_DEBUGN("malexandria installed!");
                
             Logger::InfoN("importing into remote malexandria instance...");
-            auto debug_data = mlx.read();
-            std::ofstream debug_fp("debug.mlx", std::ios::binary);
-            debug_fp.write(reinterpret_cast<char *>(debug_data.data()), debug_data.size());
+            auto mlx_data = mlx.read();
             auto import_cmd = fmt::format("malexandria transport import -p \"{}\" -", *password);
-            auto result = session.exec(import_cmd, debug_data);
+            auto result = session.exec(import_cmd, mlx_data);
             MLX_DEBUGN("exit code: {}", result.exit_code);
             MLX_DEBUGN("stdout: {}", std::string(result.output.begin(), result.output.end()));
             MLX_DEBUGN("stderr: {}", std::string(result.error.begin(), result.error.end()));

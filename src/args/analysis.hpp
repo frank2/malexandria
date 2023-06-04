@@ -403,6 +403,11 @@ namespace malexandria
             : Module("open",
                      "Open an analysis for inspection or modification.")
          {
+            this->add_argument("-o", "--overwrite")
+               .help("By default, files already present will not be overwritten on re-open. This switch will overwrite files already present.")
+               .default_value(false)
+               .implicit_value(true);
+            
             this->add_argument("analysis")
                .help("The analysis identifier for the analysis to open.")
                .required();
@@ -417,11 +422,12 @@ namespace malexandria
          bool execute(Module &root) {
             auto analysis = this->get("analysis");
             auto path = this->present("path");
+            auto overwrite = this->get<bool>("--overwrite");
             
             Analysis found_analysis;
 
             found_analysis = Analysis::FromIdentifier(analysis);
-            auto result = found_analysis.open(path);
+            auto result = found_analysis.open(overwrite, path);
             
             std::cout << result.string() << std::endl;
             
